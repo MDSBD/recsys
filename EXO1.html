@@ -1,0 +1,1763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exercice introductif — Devenez le moteur de recommandation</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-dark: #3730a3;
+    --primary-light: #818cf8;
+    --accent: #f59e0b;
+    --accent-light: #fbbf24;
+    --danger: #ef4444;
+    --success: #10b981;
+    --bg: #f8fafc;
+    --bg-alt: #f1f5f9;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
+    --radius: 14px;
+    --radius-lg: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ================= HERO ================= */
+  .hero {
+    position: relative;
+    padding: 5rem 1.5rem 4rem;
+    background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 50%, #7c3aed 100%);
+    color: white;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 25%, rgba(255,255,255,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(245,158,11,0.2) 0%, transparent 45%);
+    animation: floatBg 18s ease-in-out infinite alternate;
+  }
+
+  @keyframes floatBg {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.15) rotate(3deg); }
+  }
+
+  .hero-content { position: relative; z-index: 2; max-width: 900px; margin: 0 auto; }
+
+  .hero-badge {
+    display: inline-block;
+    padding: 0.5rem 1.2rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero h1 .gradient-text {
+    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.92;
+    max-width: 650px;
+    margin: 0 auto 2rem;
+    font-weight: 300;
+  }
+
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+  }
+
+  .meta-chip {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(10px);
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  /* ================= TOOLBAR ================= */
+  .toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+
+  .tool-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .tool-btn:hover {
+    color: var(--primary);
+    border-color: var(--primary-light);
+    background: rgba(79,70,229,0.05);
+    transform: translateY(-1px);
+  }
+
+  .tool-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .tool-btn.primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+
+  .tool-btn.warn {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .tool-btn.danger {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+  }
+
+  /* ================= CONTAINER ================= */
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  section {
+    padding: 3.5rem 0;
+  }
+
+  section:nth-of-type(even) {
+    background: var(--bg-alt);
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  .section-header .eyebrow {
+    display: inline-block;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-header h2 {
+    font-size: clamp(1.6rem, 3vw, 2.3rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-header p {
+    color: var(--text-muted);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* ================= REVEAL ANIM ================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ================= CONTEXT CARD ================= */
+  .context-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    box-shadow: var(--shadow-md);
+    border-left: 6px solid var(--primary);
+  }
+
+  .context-card h3 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    color: var(--primary-dark);
+  }
+
+  .context-card p { margin-bottom: 0.8rem; }
+  .context-card ul { margin: 1rem 0 1rem 1.5rem; color: var(--text-muted); }
+  .context-card li { margin-bottom: 0.4rem; }
+
+  /* ================= DATA TABLE ================= */
+  .data-table-wrapper {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    font-size: 0.88rem;
+    min-width: 780px;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.75rem 0.6rem;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.2s;
+  }
+
+  .data-table th {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+  }
+
+  .data-table th:first-child {
+    text-align: left;
+    padding-left: 1rem;
+  }
+
+  .data-table td:first-child {
+    text-align: left;
+    font-weight: 700;
+    color: var(--primary-dark);
+    padding-left: 1rem;
+    background: var(--bg-alt);
+  }
+
+  .data-table tbody tr:hover td {
+    background: rgba(79,70,229,0.06);
+  }
+
+  .data-table tbody tr:hover td:first-child {
+    background: rgba(79,70,229,0.12);
+  }
+
+  .rating {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: white;
+  }
+  .r1 { background: #ef4444; }
+  .r2 { background: #f97316; }
+  .r3 { background: #eab308; }
+  .r4 { background: #84cc16; }
+  .r5 { background: #10b981; }
+  .rq { background: var(--bg-alt); color: var(--text-muted); border: 1px dashed #cbd5e1; }
+
+  /* ================= QUESTION CARD ================= */
+  .qcard {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+
+  .qcard:hover { box-shadow: var(--shadow-md); }
+
+  .qcard-header {
+    padding: 1.3rem 1.6rem;
+    background: linear-gradient(135deg, #ffffff, #f8fafc);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .qcard-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.9rem;
+    flex: 1;
+  }
+
+  .qnum {
+    background: var(--primary);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  .qcard-title h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  .qcard-title .qmeta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.2rem;
+    font-weight: 500;
+  }
+
+  .qcard-body {
+    padding: 1.5rem 1.6rem 1.6rem;
+    color: var(--text);
+  }
+
+  .qcard-body p { margin-bottom: 0.9rem; }
+  .qcard-body ul, .qcard-body ol { margin-left: 1.5rem; margin-bottom: 0.9rem; }
+  .qcard-body li { margin-bottom: 0.5rem; }
+
+  /* ================= REVEAL BUTTON ================= */
+  .reveal-btn {
+    background: linear-gradient(135deg, var(--accent), #f97316);
+    color: white;
+    border: none;
+    padding: 0.7rem 1.4rem;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    font-family: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+    margin-top: 0.5rem;
+  }
+
+  .reveal-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(245,158,11,0.4);
+  }
+
+  .reveal-btn.revealed {
+    background: linear-gradient(135deg, var(--success), #059669);
+    box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+  }
+
+  .reveal-btn::before {
+    content: '👁';
+    font-size: 1rem;
+  }
+  .reveal-btn.revealed::before {
+    content: '✓';
+  }
+
+  /* ================= CORRECTION BOX ================= */
+  .correction {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    border-left: 4px solid var(--success);
+    margin-top: 1rem;
+    border-radius: 0 12px 12px 0;
+  }
+
+  .correction.open {
+    max-height: 4000px;
+  }
+
+  .correction-inner {
+    padding: 1.5rem;
+  }
+
+  .correction-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 700;
+    color: #065f46;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 2px dashed #6ee7b7;
+  }
+
+  .correction-title::before {
+    content: '✓';
+    background: var(--success);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+  }
+
+  .correction h4 {
+    color: #065f46;
+    font-size: 1rem;
+    margin: 1.2rem 0 0.6rem;
+    font-weight: 700;
+  }
+
+  .correction p, .correction li {
+    color: #064e3b;
+    font-size: 0.94rem;
+  }
+
+  .correction ul, .correction ol {
+    margin-left: 1.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .correction .formula-box {
+    background: linear-gradient(135deg, #064e3b, #065f46);
+    color: white;
+    padding: 1.2rem;
+    border-radius: 12px;
+    text-align: center;
+    margin: 1rem 0;
+    font-family: 'Cambria Math', Georgia, serif;
+    font-size: 1rem;
+    overflow-x: auto;
+  }
+
+  /* ================= INSIGHT ================= */
+  .insight {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-left: 4px solid var(--accent);
+    padding: 1rem 1.3rem;
+    border-radius: 0 12px 12px 0;
+    margin: 1rem 0;
+    color: #78350f;
+    font-size: 0.92rem;
+  }
+
+  .insight strong { color: #92400e; }
+
+  .warning-box {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    border-left: 4px solid var(--danger);
+    padding: 1rem 1.3rem;
+    border-radius: 0 12px 12px 0;
+    margin: 1rem 0;
+    color: #7f1d1d;
+    font-size: 0.92rem;
+  }
+
+  .success-box {
+    background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+    border-left: 4px solid var(--success);
+    padding: 1rem 1.3rem;
+    border-radius: 0 12px 12px 0;
+    margin: 1rem 0;
+    color: #065f46;
+    font-size: 0.92rem;
+  }
+
+  /* ================= FORMULA INLINE ================= */
+  .formula-inline {
+    background: rgba(79,70,229,0.1);
+    color: var(--primary-dark);
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-family: 'Cambria Math', Georgia, serif;
+    font-weight: 600;
+    font-size: 0.94rem;
+  }
+
+  /* ================= PROGRESS BAR ================= */
+  .progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: transparent;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.15s ease;
+    box-shadow: 0 0 10px rgba(79,70,229,0.5);
+  }
+
+  /* ================= SCORE PANEL ================= */
+  .score-panel {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    background: var(--surface);
+    padding: 1rem 1.3rem;
+    border-radius: 16px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.3s;
+  }
+
+  .score-panel:hover { transform: translateY(-3px); }
+
+  .score-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+
+  .score-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .score-reset {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.3rem;
+    transition: color 0.2s;
+  }
+  .score-reset:hover { color: var(--danger); }
+
+  /* ================= PART DIVIDER ================= */
+  .part-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 3rem 0 2rem;
+  }
+
+  .part-divider-line {
+    flex: 1;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  .part-divider-badge {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    padding: 0.6rem 1.6rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.05em;
+    box-shadow: var(--shadow-md);
+    white-space: nowrap;
+  }
+
+  /* ================= FOOTER ================= */
+  footer {
+    background: #0f172a;
+    color: #94a3b8;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: 3rem;
+  }
+
+  footer strong { color: white; }
+
+  /* ================= MODAL ================= */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 500;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    animation: fadeIn 0.3s;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 2rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    animation: modalIn 0.35s;
+  }
+
+  @keyframes modalIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: var(--bg-alt);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    transition: all 0.2s;
+  }
+
+  .modal-close:hover {
+    background: var(--danger);
+    color: white;
+  }
+
+  .modal h2 {
+    color: var(--primary-dark);
+    margin-bottom: 1rem;
+    font-size: 1.4rem;
+  }
+
+  .modal p, .modal li { color: var(--text-muted); margin-bottom: 0.6rem; }
+  .modal ul, .modal ol { margin-left: 1.4rem; }
+
+  /* ================= TIMER ================= */
+  .timer-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 0.4rem 0.9rem;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ================= RESPONSIVE ================= */
+  @media (max-width: 640px) {
+    .hero { padding: 3rem 1rem 2.5rem; }
+    .context-card { padding: 1.5rem; }
+    .qcard-header { padding: 1rem 1.2rem; }
+    .qcard-body { padding: 1.2rem; }
+    .score-panel { bottom: 1rem; right: 1rem; padding: 0.7rem 1rem; }
+    .toolbar { padding: 0.5rem; gap: 0.3rem; }
+    .tool-btn { font-size: 0.75rem; padding: 0.4rem 0.7rem; }
+    section { padding: 2.5rem 0; }
+  }
+
+  /* ================= SCROLLBAR ================= */
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-alt); }
+  ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+  /* ================= PRINT ================= */
+  @media print {
+    .toolbar, .score-panel, .progress-container, .reveal-btn, .modal-overlay { display: none !important; }
+    .correction { max-height: none !important; }
+    .hero { background: white !important; color: black !important; }
+    .hero h1 { color: black !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- PROGRESS BAR -->
+<div class="progress-container">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-content">
+    <span class="hero-badge">Exercice introductif</span>
+    <h1>Devenez le <span class="gradient-text">moteur de recommandation</span></h1>
+    <p class="hero-subtitle">
+      Un exercice à faire à la main, sans code, pour découvrir
+      tous les grands concepts des systèmes de recommandation.
+    </p>
+    <div class="hero-meta">
+      <span class="meta-chip">👥 Binômes</span>
+      <span class="meta-chip">⏱ 45 minutes</span>
+      <span class="meta-chip">📝 Papier + stylo</span>
+      <span class="meta-chip">🐍 Python optionnel</span>
+    </div>
+  </div>
+</header>
+
+<!-- TOOLBAR -->
+<nav class="toolbar">
+  <button class="tool-btn primary" id="revealAllBtn">
+    👁 Tout révéler
+  </button>
+  <button class="tool-btn danger" id="hideAllBtn">
+    🙈 Tout masquer
+  </button>
+  <button class="tool-btn warn" id="startTimerBtn">
+    ⏱ Démarrer le chrono
+  </button>
+  <span class="timer-display" id="timerDisplay" style="display:none;">00:00</span>
+  <button class="tool-btn" id="printBtn">
+    🖨 Imprimer
+  </button>
+  <button class="tool-btn" id="aboutBtn">
+    ℹ À propos
+  </button>
+</nav>
+
+<!-- CONTEXT -->
+<section id="context">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Contexte</span>
+      <h2>StreamMA — une plateforme qui démarre</h2>
+      <p>Vous êtes les premiers ingénieurs IA d'une plateforme de streaming.</p>
+    </div>
+
+    <div class="context-card reveal">
+      <h3>🎬 StreamMA en chiffres</h3>
+      <ul>
+        <li><strong>6 utilisateurs</strong> actifs (oui, c'est petit… pour l'instant)</li>
+        <li><strong>8 films</strong> disponibles dans le catalogue</li>
+        <li>Un historique partiel de notes (1 à 5 étoiles, <code>?</code> = non noté)</li>
+      </ul>
+
+      <h3 style="margin-top:1.8rem;">📊 Tableau des notes observées</h3>
+
+      <div class="data-table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Utilisateur</th>
+              <th>🎬 Inception</th>
+              <th>🌊 Casablanca</th>
+              <th>🚀 Interstellar</th>
+              <th>🎭 Parasite</th>
+              <th>🦁 Le Roi Lion</th>
+              <th>🔫 Pulp Fiction</th>
+              <th>🧙 Harry Potter</th>
+              <th>🎥 Amélie</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Yasmine</td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r4">4</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r3">3</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+            </tr>
+            <tr>
+              <td>Omar</td>
+              <td><span class="rating r4">4</span></td>
+              <td><span class="rating r3">3</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r4">4</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+            </tr>
+            <tr>
+              <td>Salma</td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r4">4</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r3">3</span></td>
+              <td><span class="rating r5">5</span></td>
+            </tr>
+            <tr>
+              <td>Karim</td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+            </tr>
+            <tr>
+              <td>Nadia</td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r4">4</span></td>
+              <td><span class="rating r3">3</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating r4">4</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r4">4</span></td>
+            </tr>
+            <tr>
+              <td>Youssef</td>
+              <td><span class="rating r2">2</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r1">1</span></td>
+              <td><span class="rating rq">?</span></td>
+              <td><span class="rating r3">3</span></td>
+              <td><span class="rating r5">5</span></td>
+              <td><span class="rating rq">?</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:1.8rem;">🌐 Informations contextuelles</h3>
+      <ul>
+        <li>🕐 <strong>Horodatage</strong> : Yasmine a noté <em>Inception</em> il y a 2 ans, <em>Interstellar</em> la semaine dernière.</li>
+        <li>📱 <strong>Appareil</strong> : Salma utilise 90 % du temps son téléphone, Karim sa TV.</li>
+        <li>🌍 <strong>Démographie</strong> : âges de 19 à 45 ans, répartis entre Casablanca, Rabat et Marrakech.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- PARTIE 1 -->
+<section>
+  <div class="container">
+    <div class="part-divider reveal">
+      <div class="part-divider-line"></div>
+      <div class="part-divider-badge">PARTIE 1 · ANALYSE À LA MAIN · 15 MIN</div>
+      <div class="part-divider-line"></div>
+    </div>
+
+    <!-- Q1.1 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">1</div>
+          <div>
+            <h3>Le diagnostic</h3>
+            <div class="qmeta">Analyse de la matrice · 4 sous-questions</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p><strong>1.1.1</strong> Calculez la <strong>sparsité</strong> de la matrice (proportion de cases vides).</p>
+        <p><strong>1.1.2</strong> Combien de films Yasmine a-t-elle notés ? Combien Omar ?</p>
+        <p><strong>1.1.3</strong> Quels utilisateurs semblent avoir des <strong>goûts proches</strong> ? Justifiez par au moins 2 exemples.</p>
+        <p><strong>1.1.4</strong> Quels films sont <strong>populaires</strong> ? Sont-ils aussi les <strong>mieux notés</strong> ? Discutez.</p>
+
+        <button class="reveal-btn" data-target="corr-1-1">Voir la correction</button>
+
+        <div class="correction" id="corr-1-1">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>1.1.1 — Calcul de la sparsité</h4>
+            <p>Matrice : <strong>6 utilisateurs × 8 films = 48 cases</strong>.</p>
+            <p>Cases remplies : Yasmine (3), Omar (4), Salma (5), Karim (3), Nadia (5), Youssef (4) = <strong>24</strong>.</p>
+            <div class="formula-box">
+              Sparsité = 1 − 24/48 = <strong style="color:#fbbf24;">50 %</strong>
+            </div>
+            <div class="insight">
+              <strong>Remarque :</strong> 50 % est très faible. Sur MovieLens 100K, la sparsité dépasse <strong>93 %</strong>. Sur Netflix, elle frôle <strong>99 %</strong>. Cet exemple est volontairement dense pour permettre le calcul à la main.
+            </div>
+
+            <h4>1.1.2 — Nombre de films notés</h4>
+            <ul>
+              <li><strong>Yasmine</strong> : 3 films → profil pauvre → <em>cold start partiel</em></li>
+              <li><strong>Omar</strong> : 4 films → profil moyen</li>
+              <li><strong>Salma</strong> : 5 films → profil riche</li>
+              <li><strong>Karim</strong> : 3 films → profil pauvre</li>
+              <li><strong>Nadia</strong> : 5 films → profil riche</li>
+              <li><strong>Youssef</strong> : 4 films → profil moyen</li>
+            </ul>
+            <p>→ Les profils sont <strong>déséquilibrés</strong>. Le système devra gérer cette hétérogénéité.</p>
+
+            <h4>1.1.3 — Utilisateurs aux goûts proches</h4>
+            <p><strong>Paire 1 — Yasmine & Karim</strong> : tous deux ont noté <em>Inception</em> (5) et <em>Interstellar</em> (4 et 5). Corrélation SF forte.</p>
+            <p><strong>Paire 2 — Salma & Nadia</strong> : <em>Casablanca</em> (5 et 4), <em>Parasite</em> (4 et 5), <em>Roi Lion</em> (5 et 4), <em>Amélie</em> (5 et 4). <strong>4 films en commun</strong> → similarité la plus forte du tableau.</p>
+            <p><strong>Paire opposée — Youssef & Nadia</strong> : <em>Parasite</em> (1 vs 5) → divergence maximale.</p>
+
+            <h4>1.1.4 — Popularité vs. qualité</h4>
+            <div class="data-table-wrapper" style="margin-top:1rem;">
+              <table class="data-table" style="min-width:auto; font-size:0.85rem;">
+                <thead>
+                  <tr><th>Film</th><th>Nb notes</th><th>Moyenne</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Inception</td><td>4</td><td>4,0</td></tr>
+                  <tr><td>Casablanca</td><td>3</td><td>4,0</td></tr>
+                  <tr><td>Interstellar</td><td>3</td><td>4,0</td></tr>
+                  <tr><td><strong>Parasite</strong></td><td><strong>5</strong></td><td>4,0</td></tr>
+                  <tr><td>Roi Lion</td><td>3</td><td>4,0</td></tr>
+                  <tr><td>Pulp Fiction</td><td>3</td><td>4,0</td></tr>
+                  <tr><td>Harry Potter</td><td>2</td><td>4,0</td></tr>
+                  <tr><td><strong>Amélie</strong></td><td>2</td><td><strong>4,5</strong></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="warning-box">
+              <strong>Piège à souligner :</strong> <em>Parasite</em> a la meilleure popularité (5 notes) mais Youssef lui a mis <strong>1/5</strong>. Un système naïf le recommanderait à Youssef → catastrophe.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q1.2 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">2</div>
+          <div>
+            <h3>Prédiction manuelle</h3>
+            <div class="qmeta">Prédire r̂(Yasmine, Parasite)</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p><strong>Prédisez la note que Yasmine donnerait à <em>Parasite</em>.</strong></p>
+        <ul>
+          <li>Expliquez votre raisonnement (pas juste un chiffre).</li>
+          <li>Indiquez quels utilisateurs vous ont servi de référence.</li>
+          <li>Indiquez votre niveau de confiance (faible / moyen / élevé) et pourquoi.</li>
+        </ul>
+
+        <button class="reveal-btn" data-target="corr-1-2">Voir la correction</button>
+
+        <div class="correction" id="corr-1-2">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>Étape 1 — Identifier les voisins de Yasmine</h4>
+            <p>Yasmine a noté : Inception (5), Interstellar (4), Roi Lion (3).</p>
+            <div class="data-table-wrapper">
+              <table class="data-table" style="min-width:auto; font-size:0.85rem;">
+                <thead>
+                  <tr><th>Voisin</th><th>Films communs</th><th>Notes voisin</th><th>Similarité</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Karim</td><td>Inception, Interstellar</td><td>5, 5</td><td>⭐⭐⭐ Élevée</td></tr>
+                  <tr><td>Omar</td><td>Inception</td><td>4</td><td>⭐⭐ Moyenne</td></tr>
+                  <tr><td>Nadia</td><td>Interstellar, Roi Lion</td><td>3, 4</td><td>⭐⭐ Moyenne</td></tr>
+                  <tr><td>Salma</td><td>Roi Lion</td><td>5</td><td>⭐ Faible</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4>Étape 2 — Leurs notes sur Parasite</h4>
+            <ul>
+              <li>Karim : <strong>?</strong> → inutilisable</li>
+              <li>Omar : 5</li>
+              <li>Nadia : 5</li>
+              <li>Salma : 4</li>
+            </ul>
+
+            <h4>Étape 3 — Prédiction</h4>
+            <p>Moyenne naïve : (5 + 5 + 4) / 3 = <strong>4,67</strong></p>
+            <p>Avec correction des biais (Yasmine moyenne 4,0 ; Omar 4,0 ; Nadia 4,0 ; Salma 4,4) :</p>
+            <div class="formula-box">
+              r̂ ≈ 4,0 + (1 + 1 − 0,4)/3 ≈ <strong style="color:#fbbf24;">4,5 / 5</strong>
+            </div>
+
+            <div class="success-box">
+              <strong>Confiance : moyenne.</strong> Peu de voisins ont noté Parasite, mais ils sont cohérents entre eux.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q1.3 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">3</div>
+          <div>
+            <h3>Recommandation Top-3</h3>
+            <div class="qmeta">Classer 3 films pour Yasmine</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p><strong>Proposez les 3 films à recommander à Yasmine</strong>, classés du meilleur au moins bon.</p>
+        <p>Pour chaque film, indiquez <strong>en une phrase</strong> pourquoi vous le recommandez.</p>
+
+        <button class="reveal-btn" data-target="corr-1-3">Voir la correction</button>
+
+        <div class="correction" id="corr-1-3">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <p>Films candidats (non vus par Yasmine) : <em>Casablanca, Parasite, Pulp Fiction, Harry Potter, Amélie</em>.</p>
+
+            <div class="data-table-wrapper">
+              <table class="data-table" style="min-width:auto; font-size:0.85rem;">
+                <thead>
+                  <tr><th>Rang</th><th>Film</th><th>Justification</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>1</strong></td>
+                    <td>🎭 Parasite</td>
+                    <td>Aime la SF exigeante (Inception 5). Parasite est apprécié par ses voisins Karim/Omar/Nadia. Prédiction ≈ 4,5.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>2</strong></td>
+                    <td>🔫 Pulp Fiction</td>
+                    <td>Karim (voisin proche) a mis 5. Cinéma d'auteur, cohérent avec Inception. Prédiction ≈ 4,3.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>3</strong></td>
+                    <td>🌊 Casablanca</td>
+                    <td>Omar (voisin moyen) a mis 3, Nadia 4. Film culte, cohérent avec son profil. Prédiction ≈ 3,8.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4>À exclure</h4>
+            <ul>
+              <li><em>Harry Potter</em> → profil famille/fantasy trop éloigné.</li>
+              <li><em>Amélie</em> → goûts de Salma/Nadia, pas ceux de Yasmine.</li>
+              <li><strong>Surtout</strong> : ne PAS recommander <em>Parasite</em> à Youssef (il a mis 1).</li>
+            </ul>
+
+            <div class="insight">
+              <strong>Réponse alternative acceptée :</strong> <em>Pulp Fiction</em> en 1ᵉʳ, <em>Parasite</em> en 2ᵉ — justifié par les notes de Karim.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PARTIE 2 -->
+<section>
+  <div class="container">
+    <div class="part-divider reveal">
+      <div class="part-divider-line"></div>
+      <div class="part-divider-badge">PARTIE 2 · FORMALISATION · 10 MIN</div>
+      <div class="part-divider-line"></div>
+    </div>
+
+    <!-- Q2.1 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">4</div>
+          <div>
+            <h3>Notation mathématique</h3>
+            <div class="qmeta">Généraliser votre raisonnement par une formule</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p>En vous inspirant de votre raisonnement en Q1.2, écrivez une <strong>formule</strong> qui généralise votre méthode pour prédire <span class="formula-inline">r̂<sub>ui</sub></span>.</p>
+        <p><strong>Notations disponibles :</strong></p>
+        <ul>
+          <li><span class="formula-inline">r̄<sub>u</sub></span> : moyenne des notes de u</li>
+          <li><span class="formula-inline">N<sub>k</sub>(u)</span> : k utilisateurs les plus proches de u</li>
+          <li><span class="formula-inline">sim(u,v)</span> : similarité entre u et v</li>
+        </ul>
+
+        <button class="reveal-btn" data-target="corr-2-1">Voir la correction</button>
+
+        <div class="correction" id="corr-2-1">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>Formule User-Based CF</h4>
+            <div class="formula-box">
+              r̂<sub>ui</sub> = r̄<sub>u</sub> + ( Σ<sub>v ∈ Nₖ(u)</sub> sim(u,v) · (r<sub>vi</sub> − r̄<sub>v</sub>) ) / ( Σ<sub>v ∈ Nₖ(u)</sub> |sim(u,v)| )
+            </div>
+
+            <h4>Décomposition pédagogique</h4>
+            <ul>
+              <li><span class="formula-inline">r̄<sub>u</sub></span> : point de départ (Yasmine note 4,0 en moyenne)</li>
+              <li><span class="formula-inline">r<sub>vi</sub> − r̄<sub>v</sub></span> : écart du voisin par rapport à sa propre moyenne</li>
+              <li><span class="formula-inline">sim(u,v)</span> : poids du voisin (un voisin proche pèse plus)</li>
+              <li>Dénominateur : normalisation pour rester dans l'échelle</li>
+            </ul>
+
+            <div class="warning-box">
+              <strong>Erreur fréquente :</strong> oublier <span class="formula-inline">r̄<sub>u</sub></span> et <span class="formula-inline">r̄<sub>v</sub></span> → prédiction biaisée par les utilisateurs généreux ou avares.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q2.2 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">5</div>
+          <div>
+            <h3>Choix de similarité</h3>
+            <div class="qmeta">Proposer deux manières de calculer sim(u,v)</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p>Proposez <strong>deux manières différentes</strong> de calculer la similarité entre utilisateurs.</p>
+        <p>Laquelle vous semble la plus robuste ? Pourquoi ?</p>
+
+        <button class="reveal-btn" data-target="corr-2-2">Voir la correction</button>
+
+        <div class="correction" id="corr-2-2">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>Similarité 1 — Cosinus</h4>
+            <div class="formula-box">
+              sim(u,v) = ( Σ r<sub>ui</sub> · r<sub>vi</sub> ) / ( √Σ r<sub>ui</sub>² · √Σ r<sub>vi</sub>² )
+            </div>
+            <p>Traite les notes comme des vecteurs. Ne corrige pas les biais de notation (un utilisateur qui met 5 partout aura une similarité haute avec tout le monde).</p>
+
+            <h4>Similarité 2 — Pearson (corrélation)</h4>
+            <div class="formula-box">
+              sim(u,v) = ( Σ (r<sub>ui</sub>−r̄<sub>u</sub>)(r<sub>vi</sub>−r̄<sub>v</sub>) ) / ( √Σ(r<sub>ui</sub>−r̄<sub>u</sub>)² · √Σ(r<sub>vi</sub>−r̄<sub>v</sub>)² )
+            </div>
+            <p>Corrige les moyennes. Mesure si les deux utilisateurs varient de la même façon. Meilleure pour détecter les goûts proches malgré des échelles différentes.</p>
+
+            <h4>Similarité 3 — Jaccard (données binaires)</h4>
+            <div class="formula-box">
+              sim(u,v) = |I<sub>u</sub> ∩ I<sub>v</sub>| / |I<sub>u</sub> ∪ I<sub>v</sub>|
+            </div>
+            <p>Ignore les notes, ne regarde que les films vus en commun. Utile pour du feedback implicite.</p>
+
+            <div class="success-box">
+              <strong>Réponse la plus robuste : Pearson.</strong> Il neutralise les biais de notation. Cosinus est trompeur si un utilisateur note tout à 5.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q2.3 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">6</div>
+          <div>
+            <h3>Détection d'une limite — le cas Karim</h3>
+            <div class="qmeta">Identifier un biais caché dans les données</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p>Regardez <strong>Karim</strong> dans le tableau.</p>
+        <ul>
+          <li>Karim a noté uniquement des films « cultes ».</li>
+          <li>Peut-on vraiment dire qu'il <strong>aime</strong> Inception ou qu'il <strong>a été influencé</strong> par sa popularité ?</li>
+        </ul>
+        <p><strong>Formulez en une phrase le biais que vous venez de détecter.</strong></p>
+
+        <button class="reveal-btn" data-target="corr-2-3">Voir la correction</button>
+
+        <div class="correction" id="corr-2-3">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <div class="success-box">
+              <strong>Réponse attendue :</strong> « Karim a noté seulement 3 films, tous très populaires (Inception, Interstellar, Pulp Fiction). On ne peut pas distinguer s'il les aime vraiment ou s'il les a choisis parce qu'ils étaient populaires. »
+            </div>
+
+            <h4>Biais identifié</h4>
+            <p><strong>Popularity bias</strong> dans les données historiques.</p>
+
+            <h4>Conséquence</h4>
+            <p>Si on entraîne le modèle sur ces données, il apprendra à recommander… des films populaires. → <strong>Boucle de rétroaction</strong> (feedback loop).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PARTIE 3 -->
+<section>
+  <div class="container">
+    <div class="part-divider reveal">
+      <div class="part-divider-line"></div>
+      <div class="part-divider-badge">PARTIE 3 · LE CAS QUI CASSE TOUT · 12 MIN</div>
+      <div class="part-divider-line"></div>
+    </div>
+
+    <!-- Q3.1 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">7</div>
+          <div>
+            <h3>Cold start utilisateur — le cas Imane</h3>
+            <div class="qmeta">Nouvelle utilisatrice sans historique</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p><strong>Imane</strong> vient de s'inscrire. Elle n'a <strong>noté aucun film</strong>.</p>
+        <p>Elle a juste renseigné : <em>« J'aime les films d'auteur, je déteste la science-fiction. »</em></p>
+        <p><strong>Que lui recommandez-vous ?</strong> Décrivez votre stratégie en 3 étapes.</p>
+
+        <button class="reveal-btn" data-target="corr-3-1">Voir la correction</button>
+
+        <div class="correction" id="corr-3-1">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>Étape 1 — Encodage des préférences textuelles</h4>
+            <ul>
+              <li>Extraire les genres/thèmes : « film d'auteur », « pas de SF ».</li>
+              <li>Utiliser des <strong>embeddings sémantiques</strong> (SBERT, TF-IDF sur synopsis).</li>
+              <li>Construire un <strong>profil utilisateur artificiel</strong> à partir de ces signaux.</li>
+            </ul>
+
+            <h4>Étape 2 — Content-Based cold start</h4>
+            <ul>
+              <li>Pour chaque item, calculer sa similarité avec le profil texte d'Imane.</li>
+              <li>Filtrer les items dont le genre = Science-Fiction.</li>
+              <li>Classer par similarité cosinus.</li>
+            </ul>
+
+            <h4>Étape 3 — Onboarding actif</h4>
+            <ul>
+              <li>Poser 5 questions rapides : « Aimez-vous les films en noir et blanc ? », etc.</li>
+              <li>Ou proposer 10 films à swiper (comme Netflix le fait à l'inscription).</li>
+              <li>Chaque clic → signal implicite exploitable immédiatement.</li>
+            </ul>
+
+            <h4>Résultats attendus</h4>
+            <ul>
+              <li>🎥 <em>Amélie</em> ⭐ (film d'auteur, français)</li>
+              <li>🎭 <em>Parasite</em> ⭐ (Palme d'or, auteur)</li>
+              <li>🌊 <em>Casablanca</em> ⭐ (classique)</li>
+              <li>❌ <strong>Exclure</strong> : <em>Interstellar</em>, <em>Inception</em> (SF)</li>
+            </ul>
+
+            <div class="insight">
+              <strong>Message clé :</strong> en cold start, la popularité et le contenu prennent le relais du collaboratif.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q3.2 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">8</div>
+          <div>
+            <h3>Cold start item — le cas Dune 3</h3>
+            <div class="qmeta">Nouvel item sans aucune note</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p><strong>« Dune: Part Three »</strong> vient d'être ajouté au catalogue.</p>
+        <p><strong>Personne</strong> ne l'a encore noté.</p>
+        <p><strong>Comment le système peut-il savoir à qui le recommander ?</strong></p>
+        <p>Quelles informations pourrait-on exploiter en dehors des notes ?</p>
+
+        <button class="reveal-btn" data-target="corr-3-2">Voir la correction</button>
+
+        <div class="correction" id="corr-3-2">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>Stratégie 1 — Content-Based par features</h4>
+            <ul>
+              <li>Genre : SF, épique → correspond aux amateurs de SF.</li>
+              <li>Acteurs, réalisateur (Villeneuve), saga (Dune 1 & 2).</li>
+              <li>Recommander aux utilisateurs ayant aimé <em>Dune 1</em>, <em>Dune 2</em>, <em>Blade Runner 2049</em>.</li>
+            </ul>
+
+            <h4>Stratégie 2 — Embeddings d'items</h4>
+            <ul>
+              <li>Placer <em>Dune 3</em> dans le même espace latent que <em>Dune 2</em>.</li>
+              <li>Calculer la similarité avec les items existants.</li>
+            </ul>
+
+            <h4>Stratégie 3 — Popularité pré-launch</h4>
+            <ul>
+              <li>Bande-annonce vue X fois, presse, buzz → signal indirect.</li>
+              <li>Injecter un prior fort : « film très attendu ».</li>
+            </ul>
+
+            <h4>Stratégie 4 — Exploration (bandits)</h4>
+            <ul>
+              <li>Montrer le film à <strong>1 % des utilisateurs</strong> pendant 48 h.</li>
+              <li>Observer les réactions → construire un historique initial.</li>
+              <li>Élargir progressivement (<strong>ε-greedy</strong>, <strong>Thompson sampling</strong>).</li>
+            </ul>
+
+            <div class="success-box">
+              <strong>Réponse synthétique :</strong> exploiter les métadonnées (genre, acteurs, réalisateur, franchise) + exploration contrôlée via bandits pour amorcer un historique.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q3.3 -->
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">9</div>
+          <div>
+            <h3>Le piège des deux algos</h3>
+            <div class="qmeta">Analyser deux baselines naïves</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p>Voici deux algorithmes proposés par vos collègues :</p>
+        <ul>
+          <li><strong>Algo A</strong> : recommande toujours les 3 films les <strong>mieux notés</strong> du catalogue.</li>
+          <li><strong>Algo B</strong> : recommande toujours les 3 films les <strong>plus populaires</strong> (les plus notés).</li>
+        </ul>
+        <p>Pour chaque algo, donnez :</p>
+        <ol>
+          <li>un avantage réel ;</li>
+          <li>un cas où il échoue complètement (avec un exemple) ;</li>
+          <li>une métrique pour mesurer son échec.</li>
+        </ol>
+
+        <button class="reveal-btn" data-target="corr-3-3">Voir la correction</button>
+
+        <div class="correction" id="corr-3-3">
+          <div class="correction-inner">
+            <div class="correction-title">Correction détaillée</div>
+
+            <h4>Algo A — Toujours les 3 films les mieux notés</h4>
+            <div class="data-table-wrapper">
+              <table class="data-table" style="min-width:auto; font-size:0.85rem;">
+                <thead>
+                  <tr><th>Critère</th><th>Réponse</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>✅ Avantage</td>
+                    <td>Simple, robuste, fonctionne pour les nouveaux utilisateurs. Sert de <strong>baseline</strong>.</td>
+                  </tr>
+                  <tr>
+                    <td>❌ Échec</td>
+                    <td><em>Harry Potter</em> a 4,0 de moyenne mais n'a été noté que par 2 personnes. Youssef, qui déteste Parasite, se verrait recommander Parasite en boucle.</td>
+                  </tr>
+                  <tr>
+                    <td>📉 Métrique</td>
+                    <td><strong>Serendipity = 0</strong> · <strong>Couverture faible</strong> · CTR effondré en production.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h4>Algo B — Toujours les 3 films les plus populaires</h4>
+            <div class="data-table-wrapper">
+              <table class="data-table" style="min-width:auto; font-size:0.85rem;">
+                <thead>
+                  <tr><th>Critère</th><th>Réponse</th></tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>✅ Avantage</td>
+                    <td>Fonctionne pour la majorité, sécurité business, évite les items confidentiels.</td>
+                  </tr>
+                  <tr>
+                    <td>❌ Échec</td>
+                    <td><em>Parasite</em> est le plus populaire (5 notes) mais Youssef lui a mis 1. Les films de niche (<em>Amélie</em>, 2 notes) ne seront jamais recommandés.</td>
+                  </tr>
+                  <tr>
+                    <td>📉 Métrique</td>
+                    <td><strong>Diversité intra-liste faible</strong> · <strong>Couverture catalogue</strong> très basse · Popularity bias amplifié.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="warning-box">
+              <strong>Message clé :</strong> toute métrique seule est trompeuse. Un bon système doit être évalué sur : précision ET diversité ET couverture ET équité.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PARTIE 4 -->
+<section>
+  <div class="container">
+    <div class="part-divider reveal">
+      <div class="part-divider-line"></div>
+      <div class="part-divider-badge">PARTIE 4 · SYNTHÈSE COLLECTIVE · 8 MIN</div>
+      <div class="part-divider-line"></div>
+    </div>
+
+    <div class="qcard reveal">
+      <div class="qcard-header">
+        <div class="qcard-title">
+          <div class="qnum">10</div>
+          <div>
+            <h3>Complétez collectivement</h3>
+            <div class="qmeta">Discussion au tableau</div>
+          </div>
+        </div>
+      </div>
+      <div class="qcard-body">
+        <p>Complétez collectivement :</p>
+        <div class="insight" style="font-size:1rem; font-style:italic;">
+          « Un bon système de recommandation, c'est un système qui… »
+        </div>
+        <div class="insight" style="font-size:1rem; font-style:italic; background:linear-gradient(135deg,#dbeafe,#bfdbfe); border-left-color:#3b82f6; color:#1e3a8a;">
+          « Le plus difficile dans un système de recommandation, c'est… »
+        </div>
+
+        <button class="reveal-btn" data-target="corr-4">Voir les réponses attendues</button>
+
+        <div class="correction" id="corr-4">
+          <div class="correction-inner">
+            <div class="correction-title">Réponses attendues</div>
+
+            <h4>« Un bon système, c'est… »</h4>
+            <ul>
+              <li>…un système qui propose le <strong>bon item à la bonne personne au bon moment</strong>.</li>
+              <li>…un système qui <strong>personnalise</strong> sans enfermer dans une <strong>bulle</strong>.</li>
+              <li>…un système qui <strong>apprend en continu</strong> sans se tromper sur le cold start.</li>
+              <li>…un système qui <strong>explique</strong> ses choix et respecte la vie privée.</li>
+            </ul>
+
+            <h4>« Le plus difficile, c'est… »</h4>
+            <ul>
+              <li>Gérer le <strong>cold start</strong> (utilisateur ET item)</li>
+              <li>Éviter les <strong>biais de popularité</strong> et de <strong>position</strong></li>
+              <li><strong>Évaluer</strong> correctement (sans data leakage)</li>
+              <li><strong>Passer à l'échelle</strong> sur des millions d'utilisateurs</li>
+              <li><strong>Rester équitable</strong> entre tous les producteurs de contenu</li>
+              <li><strong>Expliquer</strong> pourquoi on recommande tel item</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- BONUS -->
+<section>
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Bonus</span>
+      <h2>Pour aller plus loin (à la maison)</h2>
+    </div>
+
+    <div class="qcard reveal">
+      <div class="qcard-body">
+        <ol>
+          <li><strong>Reproduire le raisonnement en Python</strong> (avec <code>pandas</code> et <code>numpy</code> uniquement). Bonus : implémenter la similarité cosinus et Pearson.</li>
+          <li><strong>Trouver un article récent</strong> (2023–2025) qui parle de cold start utilisateur et rédiger 5 lignes de synthèse.</li>
+          <li><strong>Citer un système de recommandation</strong> que vous utilisez tous les jours, et décrire en 5 points : les signaux collectés, les recommandations faites, un moment où il s'est trompé, un biais remarqué, une amélioration proposée.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCORE PANEL -->
+<div class="score-panel">
+  <div>
+    <div class="score-label">Corrections vues</div>
+    <div class="score-value" id="scoreValue">0 / 10</div>
+  </div>
+  <button class="score-reset" id="scoreReset" title="Réinitialiser">↺</button>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="aboutModal">
+  <div class="modal">
+    <button class="modal-close" id="modalClose">×</button>
+    <h2>📘 À propos de cet exercice</h2>
+    <p>Cet exercice introductif fait partie du module <strong>Systèmes de Recommandation</strong> (5ᵉ année Ingénieur IA).</p>
+
+    <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary-dark);">🎯 Objectifs pédagogiques</h3>
+    <ul>
+      <li>Faire émerger les concepts clés par l'action, sans code.</li>
+      <li>Introduire naturellement le vocabulaire (sparsité, cold start, biais…).</li>
+      <li>Créer un déclic avant les définitions formelles.</li>
+      <li>Montrer que la difficulté est <em>universelle</em> (Netflix, Amazon, Spotify).</li>
+    </ul>
+
+    <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary-dark);">⌨ Raccourcis clavier</h3>
+    <ul>
+      <li><code>R</code> — Tout révéler</li>
+      <li><code>H</code> — Tout masquer</li>
+      <li><code>T</code> — Chrono</li>
+      <li><code>P</code> — Imprimer</li>
+      <li><code>Échap</code> — Fermer ce message</li>
+    </ul>
+
+    <h3 style="margin-top:1.5rem; font-size:1rem; color:var(--primary-dark);">📎 Contenu du module</h3>
+    <p>Introduction · Filtrage collaboratif · Matrix Factorization · Learning to Rank · Deep Learning · Séquentiel · Graphes · Évaluation · Biais & Fairness · LLM · Architecture industrielle</p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <p><strong>Module : Systèmes de Recommandation</strong> · 5ᵉ année Ingénieur IA</p>
+  <p style="margin-top:0.6rem; font-size:0.85rem;">Exercice introductif · Séance 1 · Volume total du module : 42 h</p>
+  <p style="margin-top:1.5rem; font-size:0.8rem; opacity:0.7; font-style:italic;">
+    « Vous venez de faire à la main, sur 6 utilisateurs et 8 films,<br>
+    exactement ce que fait Netflix en 200 ms sur 250 millions d'utilisateurs. »
+  </p>
+</footer>
+
+<script>
+  // ============ REVEAL CORRECTIONS ============
+  const revealBtns = document.querySelectorAll('.reveal-btn');
+  const totalQuestions = revealBtns.length;
+  const scoreValue = document.getElementById('scoreValue');
+  let revealedCount = 0;
+  let revealedSet = new Set();
+
+  revealBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const target = document.getElementById(targetId);
+      const isOpen = target.classList.contains('open');
+
+      if (isOpen) {
+        target.classList.remove('open');
+        btn.textContent = 'Voir la correction';
+        btn.classList.remove('revealed');
+        revealedSet.delete(idx);
+      } else {
+        target.classList.add('open');
+        btn.textContent = 'Correction affichée';
+        btn.classList.add('revealed');
+        revealedSet.add(idx);
+        // Scroll into view
+        setTimeout(() => {
+          const rect = target.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 200);
+      }
+      updateScore();
+    });
+  });
+
+  function updateScore() {
+    scoreValue.textContent = revealedSet.size + ' / ' + totalQuestions;
+  }
+
+  document.getElementById('scoreReset').addEventListener('click', () => {
+    document.querySelectorAll('.reveal-btn').forEach((btn, idx) => {
+      btn.textContent = 'Voir la correction';
+      btn.classList.remove('revealed');
+      document.getElementById(btn.dataset.target).classList.remove('open');
+    });
+    revealedSet.clear();
+    updateScore();
+  });
+
+  // ============ TOOLBAR ============
+  document.getElementById('revealAllBtn').addEventListener('click', () => {
+    document.querySelectorAll('.reveal-btn').forEach((btn, idx) => {
+      const target = document.getElementById(btn.dataset.target);
+      target.classList.add('open');
+      btn.textContent = 'Correction affichée';
+      btn.classList.add('revealed');
+      revealedSet.add(idx);
+    });
+    updateScore();
+  });
+
+  document.getElementById('hideAllBtn').addEventListener('click', () => {
+    document.querySelectorAll('.reveal-btn').forEach((btn) => {
+      const target = document.getElementById(btn.dataset.target);
+      target.classList.remove('open');
+      btn.textContent = 'Voir la correction';
+      btn.classList.remove('revealed');
+    });
+    revealedSet.clear();
+    updateScore();
+  });
+
+  document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+  // ============ MODAL ============
+  const modal = document.getElementById('aboutModal');
+  document.getElementById('aboutBtn').addEventListener('click', () => modal.classList.add('open'));
+  document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('open'));
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.classList.remove('open');
+  });
+
+  // ============ TIMER ============
+  let timerInterval = null;
+  let timerSeconds = 0;
+
+  const timerDisplay = document.getElementById('timerDisplay');
+  const startTimerBtn = document.getElementById('startTimerBtn');
+
+  startTimerBtn.addEventListener('click', () => {
+    if (timerInterval) {
+      // Stop
+      clearInterval(timerInterval);
+      timerInterval = null;
+      startTimerBtn.textContent = '⏱ Reprendre';
+      timerDisplay.style.display = 'none';
+    } else {
+      // Start
+      timerDisplay.style.display = 'inline-flex';
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        const min = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+        const sec = String(timerSeconds % 60).padStart(2, '0');
+        timerDisplay.textContent = `⏱ ${min}:${sec}`;
+        if (timerSeconds === 45 * 60) {
+          timerDisplay.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        }
+      }, 1000);
+      startTimerBtn.textContent = '⏸ Pause';
+    }
+  });
+
+  // ============ PROGRESS BAR ============
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = (scrollTop / docHeight) * 100;
+    document.getElementById('progressBar').style.width = progress + '%';
+  });
+
+  // ============ REVEAL ON SCROLL ============
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ============ KEYBOARD SHORTCUTS ============
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    const key = e.key.toLowerCase();
+    if (key === 'r') document.getElementById('revealAllBtn').click();
+    if (key === 'h') document.getElementById('hideAllBtn').click();
+    if (key === 't') document.getElementById('startTimerBtn').click();
+    if (key === 'p') document.getElementById('printBtn').click();
+    if (key === 'escape') modal.classList.remove('open');
+  });
+
+  // ============ INIT ============
+  updateScore();
+</script>
+
+</body>
+</html>

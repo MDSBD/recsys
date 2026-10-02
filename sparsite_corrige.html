@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Sparsité — Le défi fondamental des systèmes de recommandation</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-dark: #3730a3;
+    --primary-light: #818cf8;
+    --accent: #f59e0b;
+    --danger: #ef4444;
+    --success: #10b981;
+    --bg: #f8fafc;
+    --bg-alt: #f1f5f9;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
+    --radius: 14px;
+    --radius-lg: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ================= HERO ================= */
+  .hero {
+    position: relative;
+    padding: 5rem 1.5rem 4rem;
+    background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 55%, #7c3aed 100%);
+    color: white;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(245,158,11,0.22) 0%, transparent 45%);
+    animation: floatBg 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes floatBg {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.15) rotate(3deg); }
+  }
+
+  .hero-content { position: relative; z-index: 2; max-width: 900px; margin: 0 auto; }
+
+  .hero-badge {
+    display: inline-block;
+    padding: 0.5rem 1.2rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero h1 .gradient-text {
+    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.92;
+    max-width: 720px;
+    margin: 0 auto;
+    font-weight: 300;
+  }
+
+  .hero-quote {
+    margin-top: 2.5rem;
+    padding: 1.2rem 1.8rem;
+    background: rgba(255,255,255,0.1);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    text-align: left;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    font-style: italic;
+    backdrop-filter: blur(10px);
+    font-size: 0.95rem;
+  }
+
+  /* ================= NAV ================= */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .topnav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.4rem 0.85rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .topnav a:hover {
+    color: var(--primary);
+    background: var(--bg-alt);
+  }
+
+  /* ================= LAYOUT ================= */
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  section { padding: 5rem 0; }
+  section:nth-of-type(even) { background: var(--bg-alt); }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-header .eyebrow {
+    display: inline-block;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-header h2 {
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-header p {
+    color: var(--text-muted);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* ================= REVEAL ================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ================= FORMULA ================= */
+  .formula-box {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 1.8rem;
+    border-radius: var(--radius);
+    font-family: 'Cambria Math', Georgia, serif;
+    text-align: center;
+    font-size: 1.05rem;
+    margin: 1.5rem auto;
+    box-shadow: var(--shadow-md);
+    max-width: 780px;
+    overflow-x: auto;
+    line-height: 1.9;
+  }
+
+  .formula-inline {
+    background: rgba(79,70,229,0.1);
+    color: var(--primary-dark);
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-family: 'Cambria Math', Georgia, serif;
+    font-weight: 600;
+    font-size: 0.94rem;
+  }
+
+  /* ================= INTERACTIVE MATRIX ================= */
+  .matrix-lab {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+  }
+
+  .matrix-lab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .matrix-lab-header h3 {
+    font-size: 1.2rem;
+    color: var(--primary-dark);
+  }
+
+  .density-control {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .density-control label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .density-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 240px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #4f46e5, #818cf8, #f59e0b, #ef4444);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .density-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    cursor: grab;
+    border: 3px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.15s;
+  }
+
+  .density-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  .density-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    cursor: grab;
+    border: 3px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  .density-value {
+    display: inline-block;
+    min-width: 90px;
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 0.4rem 0.8rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .matrix-stage {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem;
+    background: var(--bg-alt);
+    border-radius: var(--radius);
+    min-height: 420px;
+    align-items: center;
+    overflow: auto;
+  }
+
+  .matrix-grid {
+    display: grid;
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .mcell {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .mcell.filled {
+    background: linear-gradient(135deg, #4f46e5, #818cf8);
+    box-shadow: 0 1px 3px rgba(79,70,229,0.4);
+  }
+
+  .mcell.filled:hover {
+    transform: scale(1.4);
+    z-index: 10;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    box-shadow: 0 4px 12px rgba(245,158,11,0.6);
+  }
+
+  .matrix-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #f8fafc, #e0e7ff);
+    padding: 1.2rem;
+    border-radius: var(--radius);
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: transform 0.3s;
+  }
+
+  .stat-card:hover { transform: translateY(-3px); }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-variant-numeric: tabular-nums;
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.3rem;
+    font-weight: 600;
+  }
+
+  /* ================= COMPARISON BARS ================= */
+  .compare-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .compare-item {
+    background: var(--surface);
+    padding: 1.2rem 1.5rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--primary);
+    transition: all 0.3s;
+  }
+
+  .compare-item:hover {
+    transform: translateX(6px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .compare-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .compare-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  .compare-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .compare-value {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--primary-dark);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bar-track {
+    height: 12px;
+    background: var(--bg-alt);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #4f46e5, #818cf8);
+    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 0;
+  }
+
+  /* ================= PROBLEM CARDS ================= */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .problem-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .problem-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    height: 4px;
+    width: 0;
+    background: linear-gradient(90deg, var(--danger), var(--accent));
+    transition: width 0.4s;
+  }
+
+  .problem-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .problem-card:hover::before { width: 100%; }
+
+  .problem-icon {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .problem-card h4 {
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .problem-card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  /* ================= SOLUTIONS ================= */
+  .solution-accordion {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .sol-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.9rem;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .sol-item:hover { box-shadow: var(--shadow-md); }
+
+  .sol-header {
+    padding: 1.2rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1rem;
+    user-select: none;
+    transition: background 0.2s;
+    gap: 1rem;
+  }
+
+  .sol-header:hover { background: var(--bg-alt); }
+
+  .sol-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex: 1;
+  }
+
+  .sol-num {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  .sol-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: transform 0.3s;
+  }
+
+  .sol-item.open .sol-icon { transform: rotate(45deg); }
+
+  .sol-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, padding 0.4s ease;
+    padding: 0 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.94rem;
+  }
+
+  .sol-item.open .sol-body {
+    max-height: 800px;
+    padding: 0 1.5rem 1.5rem 4.5rem;
+  }
+
+  .sol-body code {
+    background: var(--bg-alt);
+    padding: 0.1rem 0.45rem;
+    border-radius: 5px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+  }
+
+  /* ================= ANALOGY ================= */
+  .analogy {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+    border-left: 6px solid var(--accent);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analogy::before {
+    content: '📚';
+    position: absolute;
+    top: -20px;
+    right: 20px;
+    font-size: 8rem;
+    opacity: 0.15;
+    transform: rotate(15deg);
+  }
+
+  .analogy h3 {
+    color: #78350f;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .analogy p {
+    color: #92400e;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0.9rem;
+  }
+
+  .analogy strong { color: #7c2d12; }
+
+  /* ================= SIMULATOR ================= */
+  .simulator {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+  }
+
+  .sim-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .sim-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .sim-input-group label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sim-input-group input[type="number"] {
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  .sim-input-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+  }
+
+  .sim-result {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .sim-result-label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .sim-result-value {
+    font-size: 3.2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    background: linear-gradient(90deg, #fff, #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sim-result-detail {
+    font-size: 0.9rem;
+    opacity: 0.85;
+    margin-top: 0.8rem;
+    font-family: 'Fira Code', monospace;
+  }
+
+  .sim-gauge {
+    margin-top: 1.5rem;
+    height: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .sim-gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #fbbf24, #ef4444);
+    border-radius: 10px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 0;
+  }
+
+  /* ================= KEY TAKEAWAY ================= */
+  .takeaway {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .takeaway::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 25%, rgba(255,255,255,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(245,158,11,0.2) 0%, transparent 45%);
+  }
+
+  .takeaway-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .takeaway h3 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+
+  .takeaway p {
+    font-size: 1.1rem;
+    opacity: 0.95;
+    font-style: italic;
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .takeaway strong { color: #fbbf24; }
+
+  /* ================= FOOTER ================= */
+  footer {
+    background: #0f172a;
+    color: #94a3b8;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: 3rem;
+  }
+
+  footer strong { color: white; }
+
+  /* ================= PROGRESS ================= */
+  .progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.15s;
+    box-shadow: 0 0 10px rgba(79,70,229,0.5);
+  }
+
+  /* ================= RESPONSIVE ================= */
+  @media (max-width: 640px) {
+    .hero { padding: 3rem 1rem 2.5rem; }
+    section { padding: 3rem 0; }
+    .matrix-lab { padding: 1.2rem; }
+    .mcell { width: 14px; height: 14px; }
+    .density-slider { width: 160px; }
+    .analogy { padding: 1.5rem; }
+    .sim-result-value { font-size: 2.2rem; }
+    .takeaway { padding: 2rem 1.2rem; }
+  }
+
+  /* ================= SCROLLBAR ================= */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-alt); }
+  ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+</style>
+<style>.reveal{opacity:1!important;transform:none!important} .correction.open{max-height:none!important} :focus-visible{outline:3px solid #d97706;outline-offset:4px} @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}} @media print{.toolbar,.score-panel,.topnav,.modal-overlay{display:none!important}.correction{display:block!important;max-height:none!important;opacity:1!important;overflow:visible!important}details>*{display:block!important}section{break-inside:auto}.hero{padding:2rem!important}} </style><style>details{background:white;border:1px solid #dce1ee;border-radius:12px;padding:1.2rem;margin:1rem 0}summary{cursor:pointer;font-weight:700;color:#3730a3}details p{margin-top:1rem}table{width:100%;border-collapse:collapse;background:white}th,td{padding:1rem;border-bottom:1px solid #ddd;text-align:left}th{background:#eef2ff}section p{margin:1rem 0}.problem-card p{margin:.6rem 0}a{color:#3730a3}.sim-result p{color:white}.sim-detail{overflow-wrap:anywhere}@media(max-width:600px){.matrix-stage{padding:8px!important}.sim-result-value{font-size:2.2rem}}</style></head>
+<body>
+
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-content">
+    <span class="hero-badge">Concept fondamental</span>
+    <h1>La <span class="gradient-text">sparsité</span></h1>
+    <p class="hero-subtitle">
+      Mesurer les observations manquantes, comprendre leurs effets et choisir des réponses adaptées.
+    </p>
+    <div class="hero-quote">
+      « Un bon système de recommandation est un système qui sait apprendre <strong>du peu</strong>. »
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="topnav" aria-label="Navigation de la fiche"><a href="Introduction_Systemes_Recommandation.html#ressources">← Chapitre 1</a>
+  <a href="#definition">Définition</a>
+  <a href="#explorer">Explorer</a>
+  <a href="#realite">Réalité</a>
+  <a href="#problemes">Problèmes</a>
+  <a href="#solutions">Solutions</a>
+  <a href="#analogie">Analogie</a>
+  <a href="#simulateur">Simulateur</a>
+</nav>
+
+<!-- DEFINITION -->
+<section id="definition"><div class="container"><div class="section-header"><h2>Le pourcentage de cases non observées</h2></div><p>On fixe un ensemble de <strong>m utilisateurs</strong>, un catalogue de <strong>n items</strong> et une fenêtre d’observation. Ω est l'ensemble des <strong>couples utilisateur–item distincts observés</strong>. Une case peut regrouper plusieurs événements ; elle ne compte qu’une fois.</p><div class="formula-box">Densité d = |Ω| / (m × n)<br>Sparsité s = 1 − d<br>Sparsité en % = 100 × (1 − |Ω| / (m × n))</div><div class="problem-card"><h4>Manquant ne signifie pas négatif</h4><p>Un livre sans note peut être inconnu, indisponible, non proposé ou lu sans être noté. Les données manquantes ne sont généralement pas un échantillon aléatoire des goûts.</p><p>Trois clics du même utilisateur sur le même produit produisent trois événements, mais un seul couple observé. Il faut dédupliquer ou agréger avant de compter Ω. Dans une matrice de notes, un zéro de stockage ne devient pas une note de rejet.</p></div><p>Dans l'exercice StreamMA : m = 6, n = 8, |Ω| = 24, donc s = 50 %. <a href="EXO1_corrige.html">Ouvrir l'exercice</a>.</p></div></section>
+
+<!-- EXPLORER -->
+<section id="explorer">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Visualisation interactive</span>
+      <h2>Manipulez la sparsité</h2>
+      <p>
+        Déplacez le curseur pour voir comment la densité de la matrice
+        change. Chaque case <span style="color:var(--primary); font-weight:700;">bleue</span>
+        est une interaction observée.
+      </p>
+    </div>
+
+    <div class="matrix-lab reveal">
+      <div class="matrix-lab-header">
+        <h3>Matrice : 30 utilisateurs × 50 items</h3>
+        <div class="density-control">
+          <label for="densitySlider">Densité :</label>
+          <input type="range" id="densitySlider" class="density-slider" min="0" max="100" step="1" value="5">
+          <span class="density-value" id="densityValue">5 %</span>
+        </div>
+      </div>
+
+      <div class="matrix-stage">
+        <div class="matrix-grid" id="matrixGrid"></div>
+      </div>
+
+      <div class="matrix-stats">
+        <div class="stat-card">
+          <span class="stat-value" id="statTotal">1 500</span>
+          <span class="stat-label">Cases totales</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statFilled">75</span>
+          <span class="stat-label">Interactions</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statEmpty">1 425</span>
+          <span class="stat-label">Cases vides</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statSparsity">95 %</span>
+          <span class="stat-label">Sparsité</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="problem-card reveal" style="margin-top:1.5rem; max-width:900px; margin-left:auto; margin-right:auto; border-left:4px solid var(--accent);">
+      <div class="problem-icon">🎯</div>
+<h4>Observation clé</h4><p>Une densité de 5 % correspond à une sparsité de 95 % : 75 couples observés sur 1 500 possibles. Le motif est reproductible ; augmenter la densité ajoute des cases sans effacer les précédentes. Ce dessin uniforme est pédagogique : des données réelles peuvent concentrer les observations sur quelques utilisateurs ou items.</p></div></div>
+</section>
+
+<!-- REALITE -->
+<section id="realite"><div class="container"><div class="section-header"><h2>Deux références et un scénario fictif</h2></div><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Ensemble</th><th>Utilisateurs</th><th>Items</th><th>Couples notés</th><th>Sparsité</th></tr></thead><tbody><tr><td>MovieLens 100K</td><td>943</td><td>1 682</td><td>100 000</td><td>93,70 %</td></tr><tr><td>MovieLens 20M</td><td>138 493</td><td>27 278</td><td>20 000 263</td><td>99,47 %</td></tr><tr><td>Catalogue fictif</td><td>10 000</td><td>100 000</td><td>200 000</td><td>99,98 %</td></tr></tbody></table></div><p>Calculs effectués avec les effectifs des documentations officielles <a href="https://files.grouplens.org/datasets/movielens/ml-100k/README">MovieLens 100K</a> et <a href="https://files.grouplens.org/datasets/movielens/ml-20m-README.html">MovieLens 20M</a>. Le catalogue correspond ici à l'univers d'items annoncé, pas nécessairement aux seuls items notés après un autre filtrage. Ces jeux historiques filtrés ne représentent pas tous les services actuels.</p><div class="problem-card"><h4>La taille ne suffit pas à déterminer la sparsité</h4><p>Si chaque utilisateur a en moyenne k items observés, |Ω| = mk et d = k/n. À k fixé, un catalogue plus grand réduit la densité. Mais si les observations augmentent assez vite, la sparsité peut rester stable ou diminuer. Un sous-ensemble sélectionné peut être dense.</p><p>On ne peut pas calculer la sparsité d'une entreprise à partir du seul nombre d'utilisateurs et d'items : il manque |Ω|, la période et la définition du signal.</p></div></div></section>
+
+<!-- PROBLEMES -->
+<section id="problemes"><div class="container"><div class="section-header"><h2>Ce que la sparsité complique</h2></div><div class="problem-grid"><article class="problem-card"><h4>Estimations fragiles</h4><p>Peu d'observations par utilisateur ou item augmentent l'incertitude. La moyenne d'une seule note maximale ne prouve pas une qualité exceptionnelle.</p></article><article class="problem-card"><h4>Voisins peu étayés</h4><p>Deux profils peuvent partager très peu d'items. Pearson est indéfini avec une variance nulle et vaut ±1 sur deux points non constants : un grand score n'est pas une preuve de fiabilité.</p></article><article class="problem-card"><h4>Démarrage à froid</h4><p>Une ligne vide décrit un utilisateur sans interaction observée ; une colonne vide, un nouvel item sans retour. Les approches fondées uniquement sur ces interactions manquent alors d'information.</p></article><article class="problem-card"><h4>Exposition inégale</h4><p>La sparsité globale masque la concentration des données. Deux matrices avec la même sparsité peuvent avoir des répartitions très différentes. Examiner aussi les distributions par utilisateur et par item.</p></article><article class="problem-card"><h4>Coût de calcul</h4><p>Allouer m × n valeurs peut gaspiller mémoire et calcul. Un stockage creux aide sur ce coût ; il n'ajoute aucune préférence observée.</p></article></div></div></section>
+
+<!-- SOLUTIONS -->
+<section id="solutions"><div class="container"><div class="section-header"><h2>Des réponses complémentaires</h2></div><p>Chaque approche répond à un aspect du problème et possède ses limites. Ouvrez les fiches pour les comparer.</p><details><summary>1 · Stockage creux : économiser la mémoire</summary><p>Des formats comme CSR stockent les valeurs présentes et leurs indices. Ils évitent une matrice dense en mémoire, mais ne réduisent pas la sparsité statistique et ne résolvent pas le cold start.</p></details><details><summary>2 · Régularisation et factorisation : partager l'information</summary><p>Une factorisation approxime les scores par P Qᵀ, avec P de taille m × k et Q de taille n × k, où k est petit. Pour des notes explicites, une fonction de perte peut être calculée uniquement sur Ω avec régularisation. Ne pas imposer que les cases manquantes soient des notes nulles. Les modèles implicites ont d'autres conventions de confiance à préciser.</p><p>On peut calculer les scores à la demande sans reconstruire toute la matrice. Un modèle fondé seulement sur les identifiants ne traite pas automatiquement un utilisateur ou un item inédit.</p></details><details><summary>3 · Contenu et modèles hybrides : utiliser d'autres informations</summary><p>Genres, attributs ou descriptions peuvent représenter un nouvel item. Un nouvel utilisateur demande encore un contexte ou des préférences initiales. Combiner contenu et interactions n'est pas une garantie de performance : il faut évaluer la combinaison.</p></details><details><summary>4 · Signaux implicites : davantage d'observations, avec du bruit</summary><p>Clics, lectures et achats peuvent enrichir les données. Ils ont des significations différentes et dépendent de l'exposition. Un clic n'est pas une satisfaction certaine ; une absence de clic sans impression observée n'est pas un rejet établi.</p></details><details><summary>5 · Exploration et recueil de préférences</summary><p>Faire découvrir un item ou demander quelques préférences peut apporter de l'information. À univers fixé, seul un nouveau couple observé réduit la sparsité de la matrice agrégée. Des clics répétés sur un couple déjà connu ne la changent pas ; l'arrivée de nouveaux items peut l'augmenter.</p></details></div></section>
+
+<!-- ANALOGIE -->
+<section id="analogie"><div class="container"><div class="section-header"><h2>Une bibliothèque, puis d’autres domaines</h2></div><div class="problem-card"><h3>Un million de livres, cent avis</h3><p>Dans un scénario fictif, une lectrice a noté 100 livres d'un catalogue de 1 000 000. La densité de sa ligne vaut 0,01 %, sa sparsité 99,99 %. On peut chercher des lectrices aux goûts proches, exploiter les résumés et lui demander quelques préférences. Cela produit des hypothèses, pas la connaissance de tous ses goûts.</p></div><div class="problem-grid"><article class="problem-card"><h4>Formation</h4><p>Un étudiant n'a suivi que quelques cours. Une absence d'inscription peut venir des prérequis ou du calendrier.</p></article><article class="problem-card"><h4>Commerce</h4><p>Une cliente n'achète qu'une petite partie du catalogue. Les produits non achetés peuvent ne jamais lui avoir été présentés.</p></article><article class="problem-card"><h4>Musique</h4><p>Cent écoutes du même morceau enrichissent la fréquence, mais ne représentent qu'un couple auditeur–morceau observé.</p></article></div></div></section>
+
+<!-- SIMULATEUR -->
+<section id="simulateur">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Simulateur</span>
+      <h2>Calculez votre propre sparsité</h2>
+      <p>Entrez les chiffres de votre système et voyez le résultat en direct.</p>
+    </div>
+
+    <div class="simulator reveal">
+      <div class="sim-inputs">
+        <div class="sim-input-group">
+          <label for="simUsers">Nombre d'utilisateurs</label>
+          <input type="number" id="simUsers" value="943" min="1">
+        </div>
+        <div class="sim-input-group">
+          <label for="simItems">Nombre d'items</label>
+          <input type="number" id="simItems" value="1682" min="1">
+        </div>
+        <div class="sim-input-group">
+          <label for="simInteractions">Couples distincts observés |Ω|</label>
+          <input type="number" id="simInteractions" value="100000" min="0">
+        </div>
+      </div>
+
+      <div class="sim-result" aria-live="polite">
+        <div class="sim-result-label">Sparsité de votre système</div>
+        <div class="sim-result-value" id="simResult">93,70 %</div>
+        <div class="sim-result-detail" id="simDetail">
+          1 586 126 cases · 100 000 remplies · 1 486 126 vides
+        </div>
+        <p>Jauge linéaire de sparsité · 0 à 100 %</p><div class="sim-gauge" aria-hidden="true">
+          <div class="sim-gauge-fill" id="simGauge"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="problem-card reveal" style="margin-top:1.5rem; max-width:900px; margin-left:auto; margin-right:auto; border-left:4px solid var(--primary);">
+      <div class="problem-icon">🧪</div>
+<h4>À essayer, puis à expliquer</h4><ol><li>6 utilisateurs, 8 films, 24 couples : 50 %.</li><li>943 utilisateurs, 1 682 films, 100 000 couples : 93,70 %.</li><li>10 000 utilisateurs, 100 000 items, 200 000 couples : 99,98 % (fictif).</li><li>6 utilisateurs, 8 films, 49 couples : entrée impossible ; rechercher des événements répétés ou un univers incohérent.</li></ol><details><summary>Mini-TP · Ajouter une observation</summary><p>Repartir de 6 × 8 avec 24 couples. Un nouveau couple donne 25/48 de densité et 47,92 % de sparsité. Une répétition d'un couple déjà connu laisse la sparsité à 50 %. Ajouter un neuvième item sans note donne 1 − 24/54, soit 55,56 %.</p></details></div></div></section>
+
+<!-- TAKEAWAY -->
+<section>
+  <div class="container">
+    <div class="takeaway reveal">
+      <div class="takeaway-content">
+        <h3>🎯 La phrase à retenir</h3>
+        <p>
+          La sparsité décrit ce qui manque dans un univers défini. Elle doit être interprétée avec la répartition des observations, leur exposition et leur signification.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p><strong>Module : Systèmes de Recommandation</strong> · 5ᵉ année Ingénieur IA</p>
+  <p style="margin-top:0.6rem; font-size:0.85rem;">
+    Fiche pédagogique · La sparsité · Chapitre 1
+  </p>
+  <p style="margin-top:1.5rem; font-size:0.8rem; opacity:0.7; font-style:italic;">
+    Édition révisée · Calculs vérifiés · Références GroupLens consultées le 1 octobre 2026.
+  </p>
+</footer>
+
+<script>const el=id=>document.getElementById(id);
+window.addEventListener('scroll',()=>{const h=document.documentElement.scrollHeight-window.innerHeight;el('progressBar').style.width=(h>0?window.scrollY/h*100:0)+'%'});
+const total=1500,grid=el('matrixGrid'),cells=[];grid.style.gridTemplateColumns='repeat(50,1fr)';grid.style.gridTemplateRows='repeat(30,1fr)';grid.setAttribute('aria-hidden','true');
+// Deterministic permutation: 733 and 1500 are coprime.
+for(let i=0;i<total;i++){const c=document.createElement('div');c.className='mcell';grid.appendChild(c);cells.push(c)}
+function updateMatrix(){const filled=Math.round(total*Number(el('densitySlider').value)/100);cells.forEach(c=>c.classList.remove('filled'));for(let i=0;i<filled;i++)cells[(i*733+97)%total].classList.add('filled');el('densityValue').textContent=(100*filled/total).toLocaleString('fr-FR')+' %';el('statTotal').textContent=total.toLocaleString('fr-FR');el('statFilled').textContent=filled.toLocaleString('fr-FR');el('statEmpty').textContent=(total-filled).toLocaleString('fr-FR');el('statSparsity').textContent=(100*(1-filled/total)).toLocaleString('fr-FR',{maximumFractionDigits:2})+' %'}
+function sparsity(m,n,count){if(![m,n,count].every(Number.isSafeInteger)||m<1||n<1||count<0||!Number.isSafeInteger(m*n))throw Error('Entrez des entiers valides : utilisateurs et items positifs, couples ≥ 0 ; produit limité à 9 007 199 254 740 991.');if(count>m*n)throw Error('Les couples distincts ne peuvent pas dépasser m × n. Dédupliquez les événements et vérifiez l’univers.');return 100*(1-count/(m*n))}
+function updateSimulator(){try{const raw=['simUsers','simItems','simInteractions'].map(id=>el(id).value);if(raw.some(v=>v.trim()===''))throw Error('Complétez les trois champs.');const [m,n,c]=raw.map(Number),s=sparsity(m,n,c);el('simResult').textContent=s.toLocaleString('fr-FR',{maximumFractionDigits:4})+' %';el('simDetail').textContent=(m*n).toLocaleString('fr-FR')+' cases · '+c.toLocaleString('fr-FR')+' couples · '+(m*n-c).toLocaleString('fr-FR')+' cases vides';el('simGauge').style.width=s+'%'}catch(e){el('simResult').textContent='—';el('simDetail').textContent=e.message;el('simGauge').style.width='0%'}}
+el('densitySlider').addEventListener('input',updateMatrix);['simUsers','simItems','simInteractions'].forEach(id=>el(id).addEventListener('input',updateSimulator));updateMatrix();updateSimulator();
+</script>
+
+</body>
+</html>

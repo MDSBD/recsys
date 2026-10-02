@@ -1,0 +1,19 @@
+item_id,title,description,topic,language,available
+R01,Python pour analyser les données,Introduction à Python et à la manipulation de données pour construire un projet de machine learning.,IA,fr,1
+R02,Apprendre le machine learning,Modèles de classification et apprentissage supervisé avec Python sur des données structurées.,IA,fr,1
+R03,Recommandation de films avec Python,Construire un système de recommandation avec un profil utilisateur et des descriptions de films.,IA,fr,1
+R04,Embeddings et recherche sémantique,Représenter des textes par des vecteurs pour la recherche sémantique et la recommandation.,IA,fr,1
+R05,Évaluer un modèle de classification,Validation des modèles de machine learning et analyse des erreurs sur des données.,IA,fr,1
+R06,Graphes de connaissances pour le patrimoine,Organiser des données de patrimoine dans un graphe de connaissances pour la recherche documentaire.,Patrimoine,fr,1
+R07,Lire les sources du Maroc ancien,Étudier les sources historiques et les villes du Maroc ancien avec une méthode critique.,Patrimoine,fr,1
+R08,Patrimoine et villes antiques,Analyser le patrimoine des villes antiques et confronter les sources historiques aux vestiges.,Patrimoine,fr,1
+R09,Numériser une collection patrimoniale,Décrire une collection de patrimoine et préparer des métadonnées pour la recherche documentaire.,Patrimoine,fr,1
+R10,Capteurs pour une ferme connectée,Collecter des données de capteurs sur une ferme et surveiller le fonctionnement du réseau.,Agriculture,fr,1
+R11,Analyser les données agricoles avec Python,Utiliser Python pour analyser les données de capteurs agricoles et détecter des anomalies.,Agriculture,fr,1
+R12,Documents pour la culture des oliviers,Organiser les documents techniques sur les oliviers selon le sol et le contexte de culture.,Agriculture,fr,1
+R13,Surveiller une installation de capteurs,Diagnostiquer des anomalies de réseau et vérifier les données d’une installation de capteurs.,Industrie,fr,1
+R14,Maintenance prédictive et machine learning,Construire des modèles de machine learning pour détecter les anomalies des équipements industriels.,Industrie,fr,1
+R15,Sécurité des applications Python,Protéger les applications Python et contrôler les accès aux données.,Informatique,fr,1
+R16,Document retrieval with embeddings,Represent documents as dense vectors for semantic search and information retrieval.,IA,en,1
+R17,Atelier de recommandation avancée,Apprendre la recommandation neuronale et comparer les modèles de machine learning avec Python.,IA,fr,0
+R18,Films documentaires et mémoire collective,Étudier les films documentaires et leur contribution à la mémoire et au patrimoine.,Culture,fr,1

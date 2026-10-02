@@ -1,0 +1,9 @@
+MODULE — ALGORITHMES DES SYSTÈMES DE RECOMMANDATION
+
+1. Extraire entièrement cette archive ZIP.
+2. Ouvrir index.html dans un navigateur moderne.
+3. Conserver tous les fichiers du module dans le même dossier.
+
+Les chapitres 1, 2, 3, 4, 5, 6 et 7 sont disponibles. Les autres titres ouvrent une fiche du programme prévu.
+Le module fonctionne hors connexion et ne collecte aucune donnée.
+Cliquer sur RECSYS / ACCUEIL DU MODULE dans un chapitre pour revenir à l’accueil.

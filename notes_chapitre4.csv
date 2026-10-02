@@ -1,0 +1,25 @@
+userId,movieId,rating,timestamp
+Salma,Le Roi Lion,5,1700000000
+Salma,Casablanca,5,1700003600
+Karim,Pulp Fiction,5,1700007200
+Nadia,Amélie,4,1700010800
+Youssef,Parasite,1,1700014400
+Omar,Parasite,5,1700018000
+Omar,Pulp Fiction,4,1700021600
+Salma,Parasite,4,1700025200
+Yasmine,Le Roi Lion,3,1700028800
+Nadia,Le Roi Lion,4,1700032400
+Omar,Inception,4,1700036000
+Nadia,Parasite,5,1700039600
+Youssef,Harry Potter,5,1700043200
+Nadia,Casablanca,4,1700046800
+Nadia,Interstellar,3,1700050400
+Karim,Inception,5,1700054000
+Salma,Amélie,5,1700057600
+Omar,Casablanca,3,1700061200
+Youssef,Pulp Fiction,3,1700064800
+Yasmine,Interstellar,4,1700068400
+Karim,Interstellar,5,1700072000
+Yasmine,Inception,5,1700075600
+Youssef,Inception,2,1700079200
+Salma,Harry Potter,3,1700082800

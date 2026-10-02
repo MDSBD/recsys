@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Sparsité — Le défi fondamental des systèmes de recommandation</title>
+<style>
+  :root {
+    --primary: #4f46e5;
+    --primary-dark: #3730a3;
+    --primary-light: #818cf8;
+    --accent: #f59e0b;
+    --danger: #ef4444;
+    --success: #10b981;
+    --bg: #f8fafc;
+    --bg-alt: #f1f5f9;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12);
+    --radius: 14px;
+    --radius-lg: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ================= HERO ================= */
+  .hero {
+    position: relative;
+    padding: 5rem 1.5rem 4rem;
+    background: linear-gradient(135deg, #1e1b4b 0%, #4f46e5 55%, #7c3aed 100%);
+    color: white;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(245,158,11,0.22) 0%, transparent 45%);
+    animation: floatBg 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes floatBg {
+    0% { transform: scale(1) rotate(0deg); }
+    100% { transform: scale(1.15) rotate(3deg); }
+  }
+
+  .hero-content { position: relative; z-index: 2; max-width: 900px; margin: 0 auto; }
+
+  .hero-badge {
+    display: inline-block;
+    padding: 0.5rem 1.2rem;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(10px);
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.15;
+    margin-bottom: 1.2rem;
+    letter-spacing: -0.02em;
+  }
+
+  .hero h1 .gradient-text {
+    background: linear-gradient(90deg, #fbbf24, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: 1.1rem;
+    opacity: 0.92;
+    max-width: 720px;
+    margin: 0 auto;
+    font-weight: 300;
+  }
+
+  .hero-quote {
+    margin-top: 2.5rem;
+    padding: 1.2rem 1.8rem;
+    background: rgba(255,255,255,0.1);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 12px 12px 0;
+    text-align: left;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    font-style: italic;
+    backdrop-filter: blur(10px);
+    font-size: 0.95rem;
+  }
+
+  /* ================= NAV ================= */
+  .topnav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0.7rem 1rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .topnav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0.4rem 0.85rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+
+  .topnav a:hover {
+    color: var(--primary);
+    background: var(--bg-alt);
+  }
+
+  /* ================= LAYOUT ================= */
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
+
+  section { padding: 5rem 0; }
+  section:nth-of-type(even) { background: var(--bg-alt); }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+
+  .section-header .eyebrow {
+    display: inline-block;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-header h2 {
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.6rem;
+  }
+
+  .section-header p {
+    color: var(--text-muted);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  /* ================= REVEAL ================= */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ================= FORMULA ================= */
+  .formula-box {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 1.8rem;
+    border-radius: var(--radius);
+    font-family: 'Cambria Math', Georgia, serif;
+    text-align: center;
+    font-size: 1.05rem;
+    margin: 1.5rem auto;
+    box-shadow: var(--shadow-md);
+    max-width: 780px;
+    overflow-x: auto;
+    line-height: 1.9;
+  }
+
+  .formula-inline {
+    background: rgba(79,70,229,0.1);
+    color: var(--primary-dark);
+    padding: 0.15rem 0.5rem;
+    border-radius: 6px;
+    font-family: 'Cambria Math', Georgia, serif;
+    font-weight: 600;
+    font-size: 0.94rem;
+  }
+
+  /* ================= INTERACTIVE MATRIX ================= */
+  .matrix-lab {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+  }
+
+  .matrix-lab-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .matrix-lab-header h3 {
+    font-size: 1.2rem;
+    color: var(--primary-dark);
+  }
+
+  .density-control {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .density-control label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+
+  .density-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 240px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #4f46e5, #818cf8, #f59e0b, #ef4444);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .density-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    cursor: grab;
+    border: 3px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: transform 0.15s;
+  }
+
+  .density-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  .density-slider::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    cursor: grab;
+    border: 3px solid var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  .density-value {
+    display: inline-block;
+    min-width: 90px;
+    text-align: center;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    padding: 0.4rem 0.8rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+
+  .matrix-stage {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem;
+    background: var(--bg-alt);
+    border-radius: var(--radius);
+    min-height: 420px;
+    align-items: center;
+    overflow: auto;
+  }
+
+  .matrix-grid {
+    display: grid;
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .mcell {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #e2e8f0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .mcell.filled {
+    background: linear-gradient(135deg, #4f46e5, #818cf8);
+    box-shadow: 0 1px 3px rgba(79,70,229,0.4);
+  }
+
+  .mcell.filled:hover {
+    transform: scale(1.4);
+    z-index: 10;
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    box-shadow: 0 4px 12px rgba(245,158,11,0.6);
+  }
+
+  .matrix-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, #f8fafc, #e0e7ff);
+    padding: 1.2rem;
+    border-radius: var(--radius);
+    text-align: center;
+    border: 1px solid var(--border);
+    transition: transform 0.3s;
+  }
+
+  .stat-card:hover { transform: translateY(-3px); }
+
+  .stat-value {
+    font-size: 1.8rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-variant-numeric: tabular-nums;
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.3rem;
+    font-weight: 600;
+  }
+
+  /* ================= COMPARISON BARS ================= */
+  .compare-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .compare-item {
+    background: var(--surface);
+    padding: 1.2rem 1.5rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    border-left: 4px solid var(--primary);
+    transition: all 0.3s;
+  }
+
+  .compare-item:hover {
+    transform: translateX(6px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .compare-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.7rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .compare-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+  }
+
+  .compare-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .compare-value {
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--primary-dark);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bar-track {
+    height: 12px;
+    background: var(--bg-alt);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #4f46e5, #818cf8);
+    transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 0;
+  }
+
+  /* ================= PROBLEM CARDS ================= */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .problem-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .problem-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    height: 4px;
+    width: 0;
+    background: linear-gradient(90deg, var(--danger), var(--accent));
+    transition: width 0.4s;
+  }
+
+  .problem-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .problem-card:hover::before { width: 100%; }
+
+  .problem-icon {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .problem-card h4 {
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .problem-card p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+
+  /* ================= SOLUTIONS ================= */
+  .solution-accordion {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .sol-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.9rem;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .sol-item:hover { box-shadow: var(--shadow-md); }
+
+  .sol-header {
+    padding: 1.2rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1rem;
+    user-select: none;
+    transition: background 0.2s;
+    gap: 1rem;
+  }
+
+  .sol-header:hover { background: var(--bg-alt); }
+
+  .sol-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    flex: 1;
+  }
+
+  .sol-num {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  .sol-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: transform 0.3s;
+  }
+
+  .sol-item.open .sol-icon { transform: rotate(45deg); }
+
+  .sol-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, padding 0.4s ease;
+    padding: 0 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.94rem;
+  }
+
+  .sol-item.open .sol-body {
+    max-height: 800px;
+    padding: 0 1.5rem 1.5rem 4.5rem;
+  }
+
+  .sol-body code {
+    background: var(--bg-alt);
+    padding: 0.1rem 0.45rem;
+    border-radius: 5px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: var(--primary-dark);
+  }
+
+  /* ================= ANALOGY ================= */
+  .analogy {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    border-radius: var(--radius-lg);
+    padding: 2.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+    border-left: 6px solid var(--accent);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .analogy::before {
+    content: '📚';
+    position: absolute;
+    top: -20px;
+    right: 20px;
+    font-size: 8rem;
+    opacity: 0.15;
+    transform: rotate(15deg);
+  }
+
+  .analogy h3 {
+    color: #78350f;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .analogy p {
+    color: #92400e;
+    position: relative;
+    z-index: 2;
+    margin-bottom: 0.9rem;
+  }
+
+  .analogy strong { color: #7c2d12; }
+
+  /* ================= SIMULATOR ================= */
+  .simulator {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+  }
+
+  .sim-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.2rem;
+    margin-bottom: 2rem;
+  }
+
+  .sim-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .sim-input-group label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sim-input-group input[type="number"] {
+    padding: 0.8rem 1rem;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    transition: border-color 0.2s;
+    font-family: inherit;
+  }
+
+  .sim-input-group input[type="number"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+  }
+
+  .sim-result {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    text-align: center;
+  }
+
+  .sim-result-label {
+    font-size: 0.85rem;
+    opacity: 0.85;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .sim-result-value {
+    font-size: 3.2rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    background: linear-gradient(90deg, #fff, #fbbf24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .sim-result-detail {
+    font-size: 0.9rem;
+    opacity: 0.85;
+    margin-top: 0.8rem;
+    font-family: 'Fira Code', monospace;
+  }
+
+  .sim-gauge {
+    margin-top: 1.5rem;
+    height: 20px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .sim-gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #fbbf24, #ef4444);
+    border-radius: 10px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    width: 0;
+  }
+
+  /* ================= KEY TAKEAWAY ================= */
+  .takeaway {
+    background: linear-gradient(135deg, #1e1b4b, #4f46e5);
+    color: white;
+    padding: 3rem 2rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .takeaway::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 15% 25%, rgba(255,255,255,0.1) 0%, transparent 40%),
+      radial-gradient(circle at 85% 75%, rgba(245,158,11,0.2) 0%, transparent 45%);
+  }
+
+  .takeaway-content {
+    position: relative;
+    z-index: 2;
+  }
+
+  .takeaway h3 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+
+  .takeaway p {
+    font-size: 1.1rem;
+    opacity: 0.95;
+    font-style: italic;
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.7;
+  }
+
+  .takeaway strong { color: #fbbf24; }
+
+  /* ================= FOOTER ================= */
+  footer {
+    background: #0f172a;
+    color: #94a3b8;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: 3rem;
+  }
+
+  footer strong { color: white; }
+
+  /* ================= PROGRESS ================= */
+  .progress-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    z-index: 999;
+    pointer-events: none;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.15s;
+    box-shadow: 0 0 10px rgba(79,70,229,0.5);
+  }
+
+  /* ================= RESPONSIVE ================= */
+  @media (max-width: 640px) {
+    .hero { padding: 3rem 1rem 2.5rem; }
+    section { padding: 3rem 0; }
+    .matrix-lab { padding: 1.2rem; }
+    .mcell { width: 14px; height: 14px; }
+    .density-slider { width: 160px; }
+    .analogy { padding: 1.5rem; }
+    .sim-result-value { font-size: 2.2rem; }
+    .takeaway { padding: 2rem 1.2rem; }
+  }
+
+  /* ================= SCROLLBAR ================= */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-alt); }
+  ::-webkit-scrollbar-thumb { background: var(--primary-light); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+</style>
+</head>
+<body>
+
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-content">
+    <span class="hero-badge">Concept fondamental</span>
+    <h1>La <span class="gradient-text">sparsité</span></h1>
+    <p class="hero-subtitle">
+      Pourquoi la matrice des interactions est presque toujours vide —
+      et pourquoi c'est le défi numéro 1 des systèmes de recommandation.
+    </p>
+    <div class="hero-quote">
+      « Un bon système de recommandation est un système qui sait apprendre <strong>du peu</strong>. »
+    </div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="topnav">
+  <a href="#definition">Définition</a>
+  <a href="#explorer">Explorer</a>
+  <a href="#realite">Réalité</a>
+  <a href="#problemes">Problèmes</a>
+  <a href="#solutions">Solutions</a>
+  <a href="#analogie">Analogie</a>
+  <a href="#simulateur">Simulateur</a>
+</nav>
+
+<!-- DEFINITION -->
+<section id="definition">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Définition</span>
+      <h2>Le pourcentage de cases vides</h2>
+      <p>
+        La sparsité mesure la proportion d'interactions utilisateur–item
+        que l'on <strong>n'a jamais observées</strong>.
+      </p>
+    </div>
+
+    <div class="formula-box reveal">
+      Sparsité = 1 − <span style="display:inline-block; text-align:center; vertical-align:middle;">
+        <span style="display:block; padding:0 0.5rem; border-bottom:2px solid white;">|Ω|</span>
+        <span style="display:block; padding:0 0.5rem;">m × n</span>
+      </span>
+      &nbsp;&nbsp;=&nbsp;&nbsp; <strong style="color:#fbbf24;">pourcentage de cases vides</strong>
+    </div>
+
+    <div class="problem-grid reveal" style="margin-top:2rem;">
+      <div class="problem-card">
+        <div class="problem-icon">👥</div>
+        <h4><span class="formula-inline">m</span> — Nombre d'utilisateurs</h4>
+        <p>943 pour MovieLens 100K. 250 millions pour Netflix.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🎬</div>
+        <h4><span class="formula-inline">n</span> — Nombre d'items</h4>
+        <p>1 682 films pour MovieLens. 15 000 pour Netflix. 350 M pour Amazon.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">⭐</div>
+        <h4><span class="formula-inline">|Ω|</span> — Interactions observées</h4>
+        <p>100 000 notes pour MovieLens 100K. Seulement 0,001 % du catalogue réel.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXPLORER -->
+<section id="explorer">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Visualisation interactive</span>
+      <h2>Manipulez la sparsité</h2>
+      <p>
+        Déplacez le curseur pour voir comment la densité de la matrice
+        change. Chaque case <span style="color:var(--primary); font-weight:700;">bleue</span>
+        est une interaction observée.
+      </p>
+    </div>
+
+    <div class="matrix-lab reveal">
+      <div class="matrix-lab-header">
+        <h3>Matrice User–Item (50 × 30)</h3>
+        <div class="density-control">
+          <label for="densitySlider">Densité :</label>
+          <input type="range" id="densitySlider" class="density-slider" min="1" max="50" value="5">
+          <span class="density-value" id="densityValue">5 %</span>
+        </div>
+      </div>
+
+      <div class="matrix-stage">
+        <div class="matrix-grid" id="matrixGrid"></div>
+      </div>
+
+      <div class="matrix-stats">
+        <div class="stat-card">
+          <span class="stat-value" id="statTotal">1 500</span>
+          <span class="stat-label">Cases totales</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statFilled">75</span>
+          <span class="stat-label">Interactions</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statEmpty">1 425</span>
+          <span class="stat-label">Cases vides</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statSparsity">95 %</span>
+          <span class="stat-label">Sparsité</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="problem-card reveal" style="margin-top:1.5rem; max-width:900px; margin-left:auto; margin-right:auto; border-left:4px solid var(--accent);">
+      <div class="problem-icon">🎯</div>
+      <h4>Observation clé</h4>
+      <p>
+        Même en montant la densité à 50 % (ce qui n'arrive <strong>jamais</strong> dans la réalité),
+        la moitié de la matrice reste vide. Dans un système réel, on est à 1 % — parfois bien moins.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- REALITE -->
+<section id="realite">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Ordres de grandeur</span>
+      <h2>La réalité dépasse la fiction</h2>
+      <p>
+        Plus le système est grand, plus il est <strong>vide</strong>.
+        C'est contre-intuitif, mais c'est mathématique.
+      </p>
+    </div>
+
+    <div class="compare-list reveal" id="compareList">
+      <div class="compare-item">
+        <div class="compare-header">
+          <div>
+            <div class="compare-name">🎓 MovieLens 100K</div>
+            <div class="compare-meta">943 utilisateurs × 1 682 films × 100 000 notes</div>
+          </div>
+          <span class="compare-value">93,7 %</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" data-width="93.7"></div></div>
+      </div>
+
+      <div class="compare-item">
+        <div class="compare-header">
+          <div>
+            <div class="compare-name">🎓 MovieLens 20M</div>
+            <div class="compare-meta">138 000 utilisateurs × 27 000 films × 20M notes</div>
+          </div>
+          <span class="compare-value">99,5 %</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" data-width="99.5"></div></div>
+      </div>
+
+      <div class="compare-item">
+        <div class="compare-header">
+          <div>
+            <div class="compare-name">🎬 Netflix</div>
+            <div class="compare-meta">250M utilisateurs × 15 000 titres</div>
+          </div>
+          <span class="compare-value">99,97 %</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" data-width="99.97"></div></div>
+      </div>
+
+      <div class="compare-item">
+        <div class="compare-header">
+          <div>
+            <div class="compare-name">📺 YouTube</div>
+            <div class="compare-meta">2 milliards d'utilisateurs × 800M vidéos</div>
+          </div>
+          <span class="compare-value">99,999 %</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" data-width="99.999"></div></div>
+      </div>
+
+      <div class="compare-item">
+        <div class="compare-header">
+          <div>
+            <div class="compare-name">🛒 Amazon</div>
+            <div class="compare-meta">300M clients × 350M produits</div>
+          </div>
+          <span class="compare-value">99,99999 %</span>
+        </div>
+        <div class="bar-track"><div class="bar-fill" data-width="99.99999"></div></div>
+      </div>
+    </div>
+
+    <div class="problem-card reveal" style="margin-top:2rem; max-width:900px; margin-left:auto; margin-right:auto; border-left:4px solid var(--danger);">
+      <div class="problem-icon">💡</div>
+      <h4>À retenir</h4>
+      <p>
+        Un utilisateur Amazon a interagi avec <strong>0,00001 %</strong> du catalogue.
+        Le système doit deviner ses préférences sur les <strong>99,99999 %</strong> restants.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEMES -->
+<section id="problemes">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Conséquences</span>
+      <h2>Pourquoi c'est un problème</h2>
+      <p>Cinq raisons qui font de la sparsité le défi central du domaine.</p>
+    </div>
+
+    <div class="problem-grid">
+      <div class="problem-card reveal">
+        <div class="problem-icon">📉</div>
+        <h4>1. Trop peu d'exemples d'apprentissage</h4>
+        <p>Un utilisateur a noté 20 films sur 1 million. Le modèle doit quand même lui recommander le 21ᵉ. Chaque utilisateur est un point isolé dans un espace immense.</p>
+      </div>
+
+      <div class="problem-card reveal">
+        <div class="problem-icon">🎯</div>
+        <h4>2. Voisins peu fiables</h4>
+        <p>Si deux utilisateurs n'ont qu'un film en commun, leur similarité est très bruitée. Sur 1 seul film, on ne peut rien conclure — il en faudrait 10, 20, 50.</p>
+      </div>
+
+      <div class="problem-card reveal">
+        <div class="problem-icon">❄️</div>
+        <h4>3. Cold start aggravé</h4>
+        <p>Un nouvel utilisateur a 0 interaction. Sa ligne est totalement vide. Impossible de calculer une similarité avec qui que ce soit.</p>
+      </div>
+
+      <div class="problem-card reveal">
+        <div class="problem-icon">🔥</div>
+        <h4>4. Biais de popularité</h4>
+        <p>Les modèles se rabattent sur les items les plus notés. Les films de niche (vus par 3 personnes) deviennent invisibles. Boucle de rétroaction.</p>
+      </div>
+
+      <div class="problem-card reveal">
+        <div class="problem-icon">💾</div>
+        <h4>5. Complexité algorithmique</h4>
+        <p>Impossible de stocker la matrice en dense : trop de mémoire. On travaille sur des structures creuses (CSR, COO) et des algorithmes spécialisés.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOLUTIONS -->
+<section id="solutions">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Stratégies</span>
+      <h2>Comment on combat la sparsité</h2>
+      <p>Six familles de solutions, souvent combinées en pratique.</p>
+    </div>
+
+    <div class="solution-accordion reveal">
+      <div class="sol-item open">
+        <div class="sol-header">
+          <div class="sol-header-left">
+            <span class="sol-num">1</span>
+            <span>Réduire la dimension — Matrix Factorization</span>
+          </div>
+          <span class="sol-icon">+</span>
+        </div>
+        <div class="sol-body">
+          <p>On remplace la matrice creuse par deux matrices denses de petite taille :</p>
+          <p style="margin-top:0.6rem;"><code>R (943 × 1682, 94 % vide)</code> → <code>P (943 × 64) × Q (64 × 1682)</code></p>
+          <p style="margin-top:0.6rem;">Le modèle apprend des <strong>représentations latentes</strong> denses à partir de peu de signal.</p>
+        </div>
+      </div>
+
+      <div class="sol-item">
+        <div class="sol-header">
+          <div class="sol-header-left">
+            <span class="sol-num">2</span>
+            <span>Content-Based — utiliser les métadonnées</span>
+          </div>
+          <span class="sol-icon">+</span>
+        </div>
+        <div class="sol-body">
+          <p>Quand on manque d'interactions, on exploite le <strong>contenu des items</strong> : genre, synopsis, acteurs, tags, embeddings textuels.</p>
+          <p style="margin-top:0.6rem;">Le contenu ne dépend pas du comportement — parfait pour le cold start.</p>
+        </div>
+      </div>
+
+      <div class="sol-item">
+        <div class="sol-header">
+          <div class="sol-header-left">
+            <span class="sol-num">3</span>
+            <span>Hybridation — collaboratif + contenu + popularité</span>
+          </div>
+          <span class="sol-icon">+</span>
+        </div>
+        <div class="sol-body">
+          <p>La plupart des systèmes industriels combinent :</p>
+          <ul style="margin-top:0.5rem; margin-left:1.2rem;">
+            <li><strong>Collaboratif</strong> — le comportement des autres utilisateurs</li>
+            <li><strong>Content-Based</strong> — les métadonnées des items</li>
+            <li><strong>Popularité</strong> — le fallback par défaut</li>
+          </ul>
+          <p style="margin-top:0.6rem;">Chaque signal comble les trous des autres.</p>
+        </div>
+      </div>
+
+      <div class="sol-item">
+        <div class="sol-header">
+          <div class="sol-header-left">
+            <span class="sol-num">4</span>
+            <span>Feedback implicite — collecter plus de signaux</span>
+          </div>
+          <span class="sol-icon">+</span>
+        </div>
+        <div class="sol-body">
+          <p>Un clic, une vue, un scroll, une durée = une interaction. On collecte <strong>100× plus de signaux</strong> qu'avec les notes explicites.</p>
+          <p style="margin-top:0.6rem;">Sur YouTube, chaque utilisateur produit des milliers de signaux implicites par jour, contre quelques likes seulement.</p>
+        </div>
+      </div>
+
+      <div class="sol-item">
+        <div class="sol-header">
+          <div class="sol-header-left">
+            <span class="sol-num">5</span>
+            <span>Exploration — bandits contextuels</span>
+          </div>
+          <span class="sol-icon">+</span>
+        </div>
+        <div class="sol-body">
+          <p>Proposer volontairement des items nouveaux pour <strong>créer de la donnée</strong> là où elle manque.</p>
+          <p style="margin-top:0.6rem;"><code>ε-greedy</code>, <code>UCB</code>, <code>Thompson sampling</code> — chaque exploration réduit la sparsité globale.</p>
+        </div>
+      </div>
+
+      <div class="sol-item">
+        <div class="sol-header">
+          <div class="sol-header-left">
+            <span class="sol-num">6</span>
+            <span>Régularisation et priors</span>
+          </div>
+          <span class="sol-icon">+</span>
+        </div>
+        <div class="sol-body">
+          <p>Quand les données manquent, on ajoute des <strong>hypothèses</strong> :</p>
+          <ul style="margin-top:0.5rem; margin-left:1.2rem;">
+            <li>Régularisation L2 sur les embeddings</li>
+            <li>Priors bayésiens sur les facteurs latents</li>
+            <li>Contraintes de non-négativité, orthogonalité, etc.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ANALOGIE -->
+<section id="analogie">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Analogie</span>
+      <h2>La bibliothèque infinie</h2>
+    </div>
+
+    <div class="analogy reveal">
+      <h3>📚 Imaginez une bibliothèque de 1 million de livres…</h3>
+      <p>Chaque lecteur n'en a lu que <strong>20</strong>.</p>
+      <p>Et vous devez deviner le <strong>21ᵉ</strong> qu'il va aimer.</p>
+      <p style="margin-top:1.2rem;">
+        - Les 20 livres lus = 20 cases remplies<br>
+        - Les 999 980 autres = cases vides (<strong>99,998 % de sparsité</strong>)<br>
+        - Votre mission : recommander <strong>sans jamais avoir vu 99,998 % des données</strong>
+      </p>
+      <p style="margin-top:1.2rem; font-style:italic;">
+        C'est exactement ce que fait Netflix chaque fois qu'un utilisateur ouvre l'application.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- SIMULATEUR -->
+<section id="simulateur">
+  <div class="container">
+    <div class="section-header reveal">
+      <span class="eyebrow">Simulateur</span>
+      <h2>Calculez votre propre sparsité</h2>
+      <p>Entrez les chiffres de votre système et voyez le résultat en direct.</p>
+    </div>
+
+    <div class="simulator reveal">
+      <div class="sim-inputs">
+        <div class="sim-input-group">
+          <label for="simUsers">Nombre d'utilisateurs</label>
+          <input type="number" id="simUsers" value="943" min="1">
+        </div>
+        <div class="sim-input-group">
+          <label for="simItems">Nombre d'items</label>
+          <input type="number" id="simItems" value="1682" min="1">
+        </div>
+        <div class="sim-input-group">
+          <label for="simInteractions">Interactions observées</label>
+          <input type="number" id="simInteractions" value="100000" min="0">
+        </div>
+      </div>
+
+      <div class="sim-result">
+        <div class="sim-result-label">Sparsité de votre système</div>
+        <div class="sim-result-value" id="simResult">93,70 %</div>
+        <div class="sim-result-detail" id="simDetail">
+          1 586 126 cases · 100 000 remplies · 1 486 126 vides
+        </div>
+        <div class="sim-gauge">
+          <div class="sim-gauge-fill" id="simGauge"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="problem-card reveal" style="margin-top:1.5rem; max-width:900px; margin-left:auto; margin-right:auto; border-left:4px solid var(--primary);">
+      <div class="problem-icon">🧪</div>
+      <h4>Essayez ces scénarios</h4>
+      <p>
+        <strong>MovieLens 100K</strong> : 943 × 1 682 × 100 000 → 93,70 %<br>
+        <strong>MovieLens 20M</strong> : 138 000 × 27 000 × 20 000 000 → 99,46 %<br>
+        <strong>Netflix</strong> : 250 000 000 × 15 000 × 100 000 000 000 → 99,997 %<br>
+        <strong>YouTube</strong> : 2 000 000 000 × 800 000 000 × 1 000 000 000 000 → 99,9999 %
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- TAKEAWAY -->
+<section>
+  <div class="container">
+    <div class="takeaway reveal">
+      <div class="takeaway-content">
+        <h3>🎯 La phrase à retenir</h3>
+        <p>
+          La sparsité n'est pas un bug, c'est <strong>la nature même</strong> du problème
+          de recommandation. Tous les algorithmes du cours — CF, MF, DL, GNN, LLM —
+          existent en partie pour y répondre.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p><strong>Module : Systèmes de Recommandation</strong> · 5ᵉ année Ingénieur IA</p>
+  <p style="margin-top:0.6rem; font-size:0.85rem;">
+    Fiche pédagogique · La sparsité · Chapitre 1
+  </p>
+  <p style="margin-top:1.5rem; font-size:0.8rem; opacity:0.7; font-style:italic;">
+    « Un système de recommandation qui fonctionne sur une matrice pleine<br>
+    n'a jamais existé. Toute la beauté du domaine, c'est d'apprendre du vide. »
+  </p>
+</footer>
+
+<script>
+  // ============ PROGRESS BAR ============
+  window.addEventListener('scroll', () => {
+    const scrollTop = window.scrollY;
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    document.getElementById('progressBar').style.width = (scrollTop / docHeight * 100) + '%';
+  });
+
+  // ============ REVEAL ON SCROLL ============
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ============ MATRIX VISUALIZER ============
+  const ROWS = 30;
+  const COLS = 50;
+  const TOTAL = ROWS * COLS;
+  const grid = document.getElementById('matrixGrid');
+  const slider = document.getElementById('densitySlider');
+  const densityValue = document.getElementById('densityValue');
+  const statFilled = document.getElementById('statFilled');
+  const statEmpty = document.getElementById('statEmpty');
+  const statSparsity = document.getElementById('statSparsity');
+  const statTotal = document.getElementById('statTotal');
+
+  statTotal.textContent = TOTAL.toLocaleString('fr-FR');
+
+  grid.style.gridTemplateColumns = `repeat(${COLS}, 1fr)`;
+  grid.style.gridTemplateRows = `repeat(${ROWS}, 1fr)`;
+
+  let cells = [];
+
+  function buildMatrix() {
+    grid.innerHTML = '';
+    cells = [];
+    for (let i = 0; i < TOTAL; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'mcell';
+      grid.appendChild(cell);
+      cells.push(cell);
+    }
+  }
+
+  function updateMatrix() {
+    const density = parseFloat(slider.value);
+    const numFilled = Math.round(TOTAL * density / 100);
+
+    // Reset all
+    cells.forEach(c => c.classList.remove('filled'));
+
+    // Randomly fill
+    const indices = new Set();
+    while (indices.size < numFilled) {
+      indices.add(Math.floor(Math.random() * TOTAL));
+    }
+    indices.forEach(i => cells[i].classList.add('filled'));
+
+    // Update stats
+    const sparsity = 100 - density;
+    densityValue.textContent = density.toFixed(0) + ' %';
+    statFilled.textContent = numFilled.toLocaleString('fr-FR');
+    statEmpty.textContent = (TOTAL - numFilled).toLocaleString('fr-FR');
+    statSparsity.textContent = sparsity.toFixed(1) + ' %';
+  }
+
+  buildMatrix();
+  updateMatrix();
+  slider.addEventListener('input', updateMatrix);
+
+  // ============ COMPARISON BARS ============
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const bars = entry.target.querySelectorAll('.bar-fill');
+        bars.forEach((bar, idx) => {
+          setTimeout(() => {
+            bar.style.width = bar.dataset.width + '%';
+          }, idx * 150);
+        });
+        barObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.2 });
+
+  document.querySelectorAll('#compareList').forEach(el => barObserver.observe(el));
+
+  // ============ ACCORDION ============
+  document.querySelectorAll('.sol-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const item = header.parentElement;
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.sol-item').forEach(i => i.classList.remove('open'));
+      if (!isOpen) item.classList.add('open');
+    });
+  });
+
+  // ============ SIMULATOR ============
+  const simUsers = document.getElementById('simUsers');
+  const simItems = document.getElementById('simItems');
+  const simInteractions = document.getElementById('simInteractions');
+  const simResult = document.getElementById('simResult');
+  const simDetail = document.getElementById('simDetail');
+  const simGauge = document.getElementById('simGauge');
+
+  function updateSimulator() {
+    const m = parseInt(simUsers.value) || 0;
+    const n = parseInt(simItems.value) || 0;
+    const inter = parseInt(simInteractions.value) || 0;
+    const total = m * n;
+
+    if (total === 0) {
+      simResult.textContent = '—';
+      simDetail.textContent = 'Entrez des valeurs valides';
+      simGauge.style.width = '0%';
+      return;
+    }
+
+    const density = Math.min(100, (inter / total) * 100);
+    const sparsity = Math.max(0, 100 - density);
+
+    // Format with high precision
+    let sparsityText;
+    if (sparsity > 99.99) {
+      sparsityText = sparsity.toFixed(4).replace('.', ',') + ' %';
+    } else if (sparsity > 99) {
+      sparsityText = sparsity.toFixed(3).replace('.', ',') + ' %';
+    } else {
+      sparsityText = sparsity.toFixed(2).replace('.', ',') + ' %';
+    }
+
+    simResult.textContent = sparsityText;
+    simDetail.textContent =
+      total.toLocaleString('fr-FR') + ' cases · ' +
+      inter.toLocaleString('fr-FR') + ' remplies · ' +
+      (total - inter).toLocaleString('fr-FR') + ' vides';
+
+    // Gauge reflects DENSITY (inverse of sparsity for visual effect)
+    // Log scale so tiny densities are visible
+    const gaugeWidth = Math.min(100, Math.log10(density + 1) * 40);
+    simGauge.style.width = gaugeWidth + '%';
+
+    // Color the value based on severity
+    if (sparsity > 99.9) {
+      simResult.style.background = 'linear-gradient(90deg, #ef4444, #f97316)';
+      simResult.style.webkitBackgroundClip = 'text';
+    } else if (sparsity > 95) {
+      simResult.style.background = 'linear-gradient(90deg, #fbbf24, #f97316)';
+      simResult.style.webkitBackgroundClip = 'text';
+    } else {
+      simResult.style.background = 'linear-gradient(90deg, #fff, #fbbf24)';
+      simResult.style.webkitBackgroundClip = 'text';
+    }
+    simResult.style.webkitTextFillColor = 'transparent';
+    simResult.style.backgroundClip = 'text';
+  }
+
+  [simUsers, simItems, simInteractions].forEach(inp => {
+    inp.addEventListener('input', updateSimulator);
+  });
+
+  updateSimulator();
+</script>
+
+</body>
+</html>
